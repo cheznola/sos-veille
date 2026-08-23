@@ -181,7 +181,29 @@ def appeler_modele(prompt: str) -> tuple[str, int]:
 # --------------------------------------------------------------------------- parsing
 
 
+def normaliser_delimiteurs(reponse: str) -> str:
+    """Isole chaque délimiteur sur sa propre ligne.
+
+    Le modèle colle parfois un délimiteur à la fin d'une phrase d'introduction
+    ("…par domaine.===RAPPORT===") ou au début du bloc qui suit
+    ("===RAPPORT===**Périmètre**"). On réinsère les sauts de ligne manquants
+    avant de découper. Un délimiteur déjà seul sur sa ligne n'est pas touché.
+    """
+    for marqueur in MARQUEURS:
+        echappe = re.escape(marqueur)
+        # Saut de ligne AVANT le délimiteur s'il est précédé de quoi que ce soit.
+        reponse = re.sub(rf"(?<!\n)[ \t]*{echappe}", "\n" + marqueur, reponse)
+        # Saut de ligne APRÈS le délimiteur s'il est suivi de quoi que ce soit.
+        reponse = re.sub(rf"{echappe}[ \t]*(?!\n)", marqueur + "\n", reponse)
+    return reponse
+
+
 def decouper_blocs(reponse: str) -> tuple[str, str, str]:
+    # On ne fait pas confiance à la mise en forme du modèle : on la normalise
+    # d'abord, on découpe ensuite. Les garde-fous de fond (bloc absent,
+    # délimiteur en double, ordre imposé) restent inchangés.
+    reponse = normaliser_delimiteurs(reponse)
+
     positions = []
     for marqueur in MARQUEURS:
         motif = re.compile(rf"^{re.escape(marqueur)}\s*$", re.MULTILINE)
@@ -205,6 +227,8 @@ def decouper_blocs(reponse: str) -> tuple[str, str, str]:
             "(RAPPORT, SUJETS-SUIVIS, CORRECTIONS). Aucun fichier n'a été modifié."
         )
 
+    # Tout ce qui précède ===RAPPORT=== est un préambule bavard du modèle :
+    # on l'ignore, le contenu utile commence à la fin du premier délimiteur.
     rapport = reponse[positions[0].end():positions[1].start()].strip()
     suivis = reponse[positions[1].end():positions[2].start()].strip()
     corrections = reponse[positions[2].end():].strip()

@@ -135,6 +135,14 @@ seul sur sa ligne. Rien avant le premier délimiteur, rien après le dernier blo
 (les corrections, format ci-dessous, ou le mot AUCUNE)
 ```
 
+**Chaque délimiteur occupe une ligne à lui seul.** Aucun texte avant lui sur cette
+ligne, aucun texte après lui sur cette ligne. Un délimiteur collé à la fin d'une phrase
+ou au début du bloc qui suit rend la réponse inexploitable.
+
+**Aucun préambule avant `===RAPPORT===`.** N'annonce pas ce que tu vas faire, ne
+résume pas ta méthode, ne commente pas ton travail. Le tout premier caractère de ta
+réponse est le premier caractère du délimiteur `===RAPPORT===`.
+
 ### Bloc RAPPORT
 
 Ne mets pas de titre de premier niveau : il est ajouté automatiquement, avec le
