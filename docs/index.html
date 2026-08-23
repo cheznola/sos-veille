@@ -1,183 +1,402 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>SOS · un agent qui veille pendant que vous dormez</title>
-<meta name="description" content="Un agent autonome produit chaque semaine une veille RH sourcée, sans personne dans la boucle. Intervention EMLV, master RH.">
+<meta name="description" content="Chaque dimanche, un agent autonome cherche, trie et rédige une veille RH sourcée, sans personne dans la boucle. Le dernier rapport est affiché ici, chargé depuis le repo GitHub. Intervention EMLV, master RH.">
+<meta name="author" content="Emmanuel Di Marco">
+<meta name="theme-color" content="#0B181C">
+<link rel="canonical" href="https://veillerh.emmanueldimarco.fr/">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://veillerh.emmanueldimarco.fr">
+<meta property="og:site_name" content="SOS, veille RH agentique">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="SOS · un agent qui veille pendant que vous dormez">
+<meta property="og:description" content="Chaque dimanche, un agent autonome cherche, trie et rédige une veille RH sourcée, sans personne dans la boucle. Le dernier rapport est affiché ici.">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SOS · un agent qui veille pendant que vous dormez">
+<meta name="twitter:description" content="Un agent autonome produit chaque semaine une veille RH sourcée. Le dernier rapport est affiché ici.">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='12.5' fill='none' stroke='%23D4A03F' stroke-width='2.5'/><circle cx='16' cy='16' r='4' fill='%235FB0A2'/></svg>">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
+
+<script>
+  // Applique le thème avant le premier rendu, pour éviter tout clignotement.
+  (function () {
+    try {
+      var choix = localStorage.getItem("sos-theme");
+      if (choix === "light" || choix === "dark") {
+        document.documentElement.setAttribute("data-theme", choix);
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+    } catch (e) { /* localStorage indisponible : on garde le sombre par défaut */ }
+  })();
+</script>
+
 <style>
+  /* ============ jetons de thème ============ */
   :root{
-    --bg:#0B181C; --bg-2:#0F2126; --line:#22383E;
+    --bg:#0B181C; --bg-2:#0F2126; --bg-3:#081216;
+    --line:#22383E; --line-soft:#182B31;
     --ink:#EAE4D6; --ink-soft:#9BAAAD;
     --gold:#D4A03F; --teal:#5FB0A2; --red:#C85E44;
+    --gold-wash:rgba(212,160,63,.08); --teal-wash:rgba(95,176,162,.07);
     --serif:"Newsreader",Georgia,serif;
     --sans:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
     --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --mesure:66ch;
   }
+  .clair{
+    --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
+    --line:#DAD1BE; --line-soft:#E6DECD;
+    --ink:#15272C; --ink-soft:#5D6E72;
+    --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
+    --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
+  }
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme="dark"]){
+      --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
+      --line:#DAD1BE; --line-soft:#E6DECD;
+      --ink:#15272C; --ink-soft:#5D6E72;
+      --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
+      --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
+    --line:#DAD1BE; --line-soft:#E6DECD;
+    --ink:#15272C; --ink-soft:#5D6E72;
+    --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
+    --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
+  }
+
+  /* ============ base ============ */
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
   body{
     margin:0; background:var(--bg); color:var(--ink);
-    font-family:var(--serif); font-weight:300; font-size:19px; line-height:1.62;
+    font-family:var(--serif); font-weight:300;
+    font-size:19px; line-height:1.78; letter-spacing:.004em;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1000px; margin:0 auto; padding:0 28px}
-  .mono{font-family:var(--mono); font-weight:500; text-transform:uppercase;
-        letter-spacing:.18em; font-size:.7rem; color:var(--ink-soft)}
-  a{color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(212,160,63,.35)}
+  .wrap{max-width:1060px; margin:0 auto; padding:0 32px}
+  .mesure{max-width:var(--mesure)}
+  p{margin:0 0 1.35em}
+  a{color:var(--gold); text-decoration:none;
+    border-bottom:1px solid color-mix(in srgb, var(--gold) 35%, transparent)}
   a:hover{border-bottom-color:var(--gold)}
-  section{border-top:1px solid var(--line); padding:76px 0}
+  a:focus-visible,button:focus-visible,summary:focus-visible{
+    outline:2px solid var(--teal); outline-offset:3px; border-radius:1px}
 
-  /* ---------- header ---------- */
-  header{padding:96px 0 76px}
-  .eyebrow{display:flex; align-items:center; gap:14px; margin-bottom:34px}
+  .mono{font-family:var(--mono); font-weight:500; text-transform:uppercase;
+        letter-spacing:.2em; font-size:.68rem; color:var(--ink-soft)}
+
+  section{border-top:1px solid var(--line); padding:104px 0}
+  .titre-bloc{margin-bottom:64px}
+  h2{font-family:var(--sans); font-weight:800;
+     font-size:clamp(1.75rem,4vw,2.6rem); letter-spacing:-.025em;
+     line-height:1.14; margin:.5em 0 .55em; text-wrap:balance}
+  .chapo{color:var(--ink-soft); font-size:1.06rem; max-width:56ch; margin:0}
+
+  /* ============ bascule de thème ============ */
+  .barre{position:sticky; top:0; z-index:40; background:color-mix(in srgb, var(--bg) 88%, transparent);
+         backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft)}
+  .barre-in{max-width:1060px; margin:0 auto; padding:13px 32px;
+            display:flex; align-items:center; gap:16px}
+  .marque{font-family:var(--sans); font-weight:800; letter-spacing:-.01em; font-size:1rem}
+  .marque .p{color:var(--gold)}
+  .theme-btn{margin-left:auto; display:inline-flex; align-items:center; gap:9px;
+    background:transparent; color:var(--ink-soft); border:1px solid var(--line);
+    padding:7px 14px; cursor:pointer; font-family:var(--mono); font-size:.66rem;
+    text-transform:uppercase; letter-spacing:.16em; transition:color .2s, border-color .2s}
+  .theme-btn:hover{color:var(--ink); border-color:var(--ink-soft)}
+  .theme-btn svg{width:13px; height:13px; flex:none}
+
+  /* ============ hero ============ */
+  header.hero{padding:120px 0 108px}
+  .eyebrow{display:flex; align-items:center; gap:14px; margin-bottom:46px}
   .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--gold); flex:none}
-  h1{
-    font-family:var(--sans); font-weight:800; font-size:clamp(2.5rem,7.2vw,4.6rem);
-    line-height:1.03; letter-spacing:-.025em; margin:0 0 28px; text-wrap:balance;
-  }
-  h1 .sep{color:var(--gold)}
+  h1{font-family:var(--sans); font-weight:800;
+     font-size:clamp(2.4rem,7vw,4.5rem); line-height:1.06; letter-spacing:-.03em;
+     margin:0 0 .5em; text-wrap:balance}
+  h1 .p{color:var(--gold)}
   h1 em{font-style:normal; color:var(--teal)}
-  .lede{font-size:clamp(1.1rem,2.4vw,1.36rem); max-width:44ch; color:var(--ink);
-        opacity:.9; margin:0}
-  .lede strong{font-weight:400; color:var(--gold)}
+  .lede{font-size:clamp(1.12rem,2.2vw,1.4rem); line-height:1.7; max-width:46ch;
+        margin:0 0 2em}
+  .lede b{font-weight:400; color:var(--gold)}
+  .hero-meta{display:flex; flex-wrap:wrap; gap:12px 34px; padding-top:34px;
+             border-top:1px solid var(--line)}
 
-  /* ---------- le mur ---------- */
-  h2{font-family:var(--sans); font-weight:800; font-size:clamp(1.6rem,3.6vw,2.3rem);
-     letter-spacing:-.02em; line-height:1.12; margin:0 0 12px}
-  .section-intro{color:var(--ink-soft); max-width:52ch; margin:0 0 46px}
-  .wall{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line)}
-  .wall > div{padding:34px 30px}
-  .wall > div:first-child{border-right:1px solid var(--line)}
-  .wall h3{font-family:var(--sans); font-weight:600; font-size:1.28rem; margin:14px 0 18px;
-           letter-spacing:-.01em}
-  .wall .tag{color:var(--red)}
-  .wall .is-agent .tag{color:var(--teal)}
-  .wall ul{list-style:none; margin:0; padding:0; font-size:.99rem}
-  .wall li{padding:11px 0 11px 24px; position:relative; border-top:1px solid rgba(34,56,62,.6);
-           color:var(--ink-soft)}
-  .wall li:first-child{border-top:0}
-  .wall li::before{content:"—"; position:absolute; left:0; color:var(--line)}
-  .wall .is-agent li::before{content:"→"; color:var(--teal)}
-  .keyline{
-    margin:44px 0 0; padding:32px 0 0; border-top:1px solid var(--line);
-    font-family:var(--sans); font-weight:600; font-size:clamp(1.25rem,3vw,1.75rem);
-    line-height:1.28; letter-spacing:-.015em; text-wrap:balance;
-  }
-  .keyline b{font-weight:800; color:var(--gold)}
+  /* ============ le mur ============ */
+  .mur{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line)}
+  .mur > div{padding:44px 40px}
+  .mur > div:first-child{border-right:1px solid var(--line)}
+  .mur h3{font-family:var(--sans); font-weight:600; font-size:1.3rem;
+          letter-spacing:-.012em; margin:18px 0 30px; line-height:1.3}
+  .mur .tag{color:var(--red)}
+  .mur .agent .tag{color:var(--teal)}
+  .mur ul{list-style:none; margin:0; padding:0; font-size:1rem; line-height:1.6}
+  .mur li{padding:16px 0 16px 28px; position:relative; color:var(--ink-soft);
+          border-top:1px solid var(--line-soft)}
+  .mur li:first-child{border-top:0; padding-top:0}
+  .mur li::before{content:"·"; position:absolute; left:2px; color:var(--line);
+                  font-size:1.4em; line-height:1.1}
+  .mur .agent li::before{content:"›"; color:var(--teal); font-size:1.1em; line-height:1.5}
+  .cle{margin:64px 0 0; padding:44px 0 0; border-top:1px solid var(--line);
+       font-family:var(--sans); font-weight:600;
+       font-size:clamp(1.3rem,3.1vw,1.95rem); line-height:1.32;
+       letter-spacing:-.02em; text-wrap:balance}
+  .cle b{font-weight:800; color:var(--gold)}
 
-  /* ---------- cycle ---------- */
-  .cycle-frame{border:1px solid var(--line); padding:18px 10px; background:
-      radial-gradient(120% 90% at 50% 40%, rgba(95,176,162,.05), transparent 70%)}
+  /* ============ cycle ============ */
+  .cadre{border:1px solid var(--line); background:var(--bg-2); padding:26px 14px}
   svg.cycle{display:block; width:100%; height:auto}
   .n-label{font-family:var(--sans); font-weight:600; font-size:17px; fill:var(--ink)}
   .n-sub{font-family:var(--mono); font-weight:400; font-size:11px; letter-spacing:.1em;
          text-transform:uppercase; fill:var(--ink-soft)}
-  .n-num{font-family:var(--mono); font-weight:500; font-size:19px; letter-spacing:.02em}
+  .n-num{font-family:var(--mono); font-weight:500; font-size:19px}
   .c-mid{font-family:var(--mono); font-weight:500; font-size:11.5px; letter-spacing:.2em;
          text-transform:uppercase; fill:var(--ink-soft)}
+  .legende{margin-top:26px; display:flex; flex-wrap:wrap; gap:10px 30px; align-items:center}
+  .legende span{display:inline-flex; align-items:center; gap:9px}
+  .puce{width:9px; height:9px; border-radius:50%; flex:none}
 
-  /* ---------- chiffres ---------- */
-  .stats{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line)}
-  .stat{padding:30px 24px; border-right:1px solid var(--line)}
-  .stat:last-child{border-right:0}
-  .stat .v{font-family:var(--sans); font-weight:800; font-size:clamp(2rem,4.6vw,2.9rem);
-           line-height:1; letter-spacing:-.03em; color:var(--gold); display:block; margin-bottom:12px}
-  .stat.teal .v{color:var(--teal)}
-  .stat .k{font-size:.94rem; color:var(--ink-soft); line-height:1.4}
+  /* ============ terminal ============ */
+  .term{border:1px solid var(--line); background:var(--bg-3); overflow:hidden}
+  .term-h{display:flex; align-items:center; gap:14px; padding:14px 20px;
+          border-bottom:1px solid var(--line); background:var(--bg-2)}
+  .term-h .titre{font-family:var(--mono); font-size:.7rem; letter-spacing:.16em;
+                 text-transform:uppercase; color:var(--ink-soft)}
+  .badge{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono);
+         font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:var(--red);
+         border:1px solid color-mix(in srgb, var(--red) 45%, transparent);
+         padding:3px 9px}
+  .badge i{width:6px; height:6px; border-radius:50%; background:var(--red);
+           animation:battement 1.6s ease-in-out infinite}
+  @keyframes battement{0%,100%{opacity:1}50%{opacity:.2}}
+  .horloge{margin-left:auto; font-family:var(--mono); font-size:.7rem;
+           letter-spacing:.1em; color:var(--ink-soft); font-variant-numeric:tabular-nums}
+  .term-b{padding:22px 20px; min-height:250px; font-family:var(--mono);
+          font-size:.79rem; line-height:1.55; display:flex; flex-direction:column; gap:11px}
+  .ligne{display:flex; gap:11px; align-items:flex-start; word-break:break-word}
+  .ligne .fl{color:var(--teal); flex:none}
+  .ligne .h{color:var(--ink-soft); flex:none; font-variant-numeric:tabular-nums}
+  .ligne .t{color:var(--ink)}
+  .ligne .k{color:var(--gold)}
+  .ligne.neuve{animation:apparition .5s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes apparition{from{opacity:0; transform:translateY(-9px)} to{opacity:1; transform:none}}
+  .note{margin-top:20px; font-size:.92rem; color:var(--ink-soft)}
 
-  /* ---------- rapport ---------- */
-  .report-head{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
-               gap:16px; margin-bottom:26px}
-  .report-card{border:1px solid var(--line); background:var(--bg-2)}
-  .report-top{padding:22px 30px; border-bottom:1px solid var(--line);
-              display:flex; flex-wrap:wrap; align-items:center; gap:14px}
-  .live{display:inline-flex; align-items:center; gap:9px}
-  .live .pulse{width:7px; height:7px; border-radius:50%; background:var(--teal);
-               animation:pulse 2.2s ease-in-out infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .report-date{font-family:var(--sans); font-weight:600; font-size:1.16rem; margin-left:auto}
-  .report-body{padding:14px 30px 34px; font-size:1.02rem}
-  .state{padding:52px 30px; text-align:center; color:var(--ink-soft)}
-  .state .spin{width:24px; height:24px; margin:0 auto 20px; border:2px solid var(--line);
-               border-top-color:var(--teal); border-radius:50%; animation:spin 1s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .state.err{color:var(--ink)}
-  .state.err .mark{color:var(--red); font-family:var(--mono); font-size:.8rem;
-                   letter-spacing:.18em; text-transform:uppercase; display:block; margin-bottom:14px}
+  /* ============ repo / github ============ */
+  .notions{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line)}
+  .notion{padding:40px}
+  .notion:first-child{border-right:1px solid var(--line)}
+  .notion h3{font-family:var(--sans); font-weight:800; font-size:1.28rem;
+             letter-spacing:-.015em; margin:16px 0 20px}
+  .notion p:last-child{margin-bottom:0}
+  .notion .ill{font-family:var(--mono); font-size:.74rem; color:var(--ink-soft);
+    background:var(--bg-2); border:1px solid var(--line-soft); padding:14px 16px;
+    margin-top:22px; line-height:1.9}
+  .notion .ill b{color:var(--gold); font-weight:500}
+
+  /* ============ chiffres ============ */
+  .chiffres{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line)}
+  .ch{padding:40px 30px; border-right:1px solid var(--line)}
+  .ch:last-child{border-right:0}
+  .ch .v{font-family:var(--sans); font-weight:800; font-size:clamp(2.1rem,4.4vw,3rem);
+         line-height:1; letter-spacing:-.035em; color:var(--gold);
+         display:block; margin-bottom:18px}
+  .ch.t .v{color:var(--teal)}
+  .ch .k{font-size:.97rem; line-height:1.55; color:var(--ink-soft)}
+
+  /* ============ rapport ============ */
+  .rap{border:1px solid var(--line); background:var(--bg-2)}
+  .rap-h{padding:28px 34px; border-bottom:1px solid var(--line)}
+  .rap-h-top{display:flex; flex-wrap:wrap; align-items:center; gap:14px 18px}
+  .direct{display:inline-flex; align-items:center; gap:9px}
+  .direct i{width:7px; height:7px; border-radius:50%; background:var(--teal);
+            animation:battement 2.4s ease-in-out infinite; flex:none}
+  .rap-date{font-family:var(--sans); font-weight:800; font-size:1.5rem;
+            letter-spacing:-.02em; margin-left:auto}
+  .resume{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; align-items:center}
+  .pastille{font-family:var(--mono); font-size:.66rem; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--ink-soft);
+    border:1px solid var(--line); padding:6px 11px}
+  .pastille.fort{color:var(--gold); border-color:color-mix(in srgb, var(--gold) 42%, transparent);
+                 background:var(--gold-wash)}
+  .rap-corps{padding:12px 34px 34px}
+
+  details.sujet{border-bottom:1px solid var(--line)}
+  details.sujet:last-of-type{border-bottom:0}
+  details.sujet > summary{
+    list-style:none; cursor:pointer; padding:26px 40px 26px 0; position:relative;
+    font-family:var(--sans); font-weight:600; font-size:1.13rem; line-height:1.4;
+    letter-spacing:-.012em; color:var(--ink); text-wrap:balance}
+  details.sujet > summary::-webkit-details-marker{display:none}
+  details.sujet > summary::after{
+    content:"+"; position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    font-family:var(--mono); font-size:1.15rem; color:var(--teal); line-height:1;
+    transition:transform .2s}
+  details.sujet[open] > summary::after{content:"–"}
+  details.sujet > summary:hover{color:var(--gold)}
+  .sujet-meta{display:block; margin-top:11px; font-family:var(--mono); font-weight:400;
+    font-size:.63rem; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-soft)}
+  .sujet-corps{padding:2px 40px 30px 0; animation:deplie .28s ease both}
+  @keyframes deplie{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
+
+  details.simple{border:1px solid var(--line); background:var(--bg); margin-top:30px}
+  details.simple > summary{list-style:none; cursor:pointer; padding:18px 24px;
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-soft); position:relative}
+  details.simple > summary::-webkit-details-marker{display:none}
+  details.simple > summary::after{content:"+"; position:absolute; right:22px; color:var(--teal)}
+  details.simple[open] > summary::after{content:"–"}
+  details.simple > summary:hover{color:var(--ink)}
+  .simple-corps{padding:4px 24px 24px}
+
+  .etat{padding:76px 34px; text-align:center; color:var(--ink-soft)}
+  .etat .tourne{width:26px; height:26px; margin:0 auto 24px; border:2px solid var(--line);
+    border-top-color:var(--teal); border-radius:50%; animation:rot 1s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .etat.err .marque-err{color:var(--red); font-family:var(--mono); font-size:.68rem;
+    letter-spacing:.2em; text-transform:uppercase; display:block; margin-bottom:18px}
 
   /* markdown rendu */
-  .md h1,.md h2,.md h3{font-family:var(--sans); letter-spacing:-.015em; line-height:1.2}
-  .md h1{font-weight:800; font-size:1.6rem; margin:34px 0 14px}
-  .md h2{font-weight:800; font-size:1.3rem; margin:38px 0 12px; padding-top:22px;
-         border-top:1px solid var(--line)}
-  .md h2:first-child{border-top:0; padding-top:0; margin-top:18px}
-  .md h3{font-weight:600; font-size:1.08rem; margin:26px 0 10px; color:var(--teal)}
-  .md p{margin:0 0 15px}
-  .md strong{font-weight:400; color:var(--gold); font-family:var(--mono); font-size:.78em;
-             letter-spacing:.13em; text-transform:uppercase}
-  .md h1 strong,.md h2 strong,.md h3 strong,.md em strong{font-family:inherit; font-size:inherit;
-             letter-spacing:normal; text-transform:none; color:inherit; font-weight:800}
+  .md{font-size:1.02rem; line-height:1.8}
+  .md > :first-child{margin-top:0}
+  .md p{margin:0 0 1.15em}
+  .md strong{font-weight:400; color:var(--gold); font-family:var(--mono);
+    font-size:.72em; letter-spacing:.15em; text-transform:uppercase; margin-right:.15em}
   .md em{color:var(--ink-soft); font-style:italic}
-  .md ul,.md ol{margin:0 0 18px; padding-left:22px}
-  .md li{margin-bottom:9px}
+  .md ul,.md ol{margin:0 0 1.2em; padding-left:24px}
+  .md li{margin-bottom:.6em}
   .md li::marker{color:var(--teal)}
-  .md hr{border:0; border-top:1px solid var(--line); margin:30px 0}
-  .md blockquote{margin:22px 0; padding:16px 22px; border-left:2px solid var(--gold);
-                 background:rgba(212,160,63,.05); color:var(--ink)}
+  .md h1,.md h2,.md h3{font-family:var(--sans); letter-spacing:-.015em; line-height:1.25}
+  .md h2{font-weight:800; font-size:1.2rem; margin:1.6em 0 .6em}
+  .md h3{font-weight:600; font-size:1.05rem; color:var(--teal); margin:1.5em 0 .5em}
+  .md hr{border:0; border-top:1px solid var(--line); margin:1.8em 0}
+  .md blockquote{margin:1.5em 0; padding:20px 26px; border-left:2px solid var(--gold);
+                 background:var(--gold-wash)}
   .md blockquote p:last-child{margin-bottom:0}
-  .md code{font-family:var(--mono); font-size:.86em; background:rgba(34,56,62,.7);
-           padding:2px 6px; border-radius:2px}
-  .md pre{overflow-x:auto; padding:16px; background:#081216; border:1px solid var(--line)}
-  .md table{width:100%; border-collapse:collapse; margin:20px 0; font-size:.94rem; display:block;
-            overflow-x:auto}
-  .md th,.md td{border:1px solid var(--line); padding:9px 12px; text-align:left}
+  .md code{font-family:var(--mono); font-size:.85em; background:var(--bg-3);
+           padding:2px 6px; border:1px solid var(--line-soft)}
+  .md pre{overflow-x:auto; padding:18px; background:var(--bg-3); border:1px solid var(--line)}
   .md a{word-break:break-word}
-  .fallback{white-space:pre-wrap; font-family:var(--mono); font-size:.8rem; line-height:1.7}
+  .md table{width:100%; border-collapse:collapse; margin:1.4em 0; font-size:.95rem;
+            display:block; overflow-x:auto}
+  .md th,.md td{border:1px solid var(--line); padding:10px 13px; text-align:left}
+  .brut{white-space:pre-wrap; font-family:var(--mono); font-size:.78rem; line-height:1.75}
 
-  /* ---------- footer ---------- */
-  footer{border-top:1px solid var(--line); padding:54px 0 76px; color:var(--ink-soft);
-         font-size:.95rem}
-  .foot-grid{display:flex; flex-wrap:wrap; gap:18px 40px; align-items:baseline;
-             justify-content:space-between}
+  /* ============ sources ============ */
+  .annuaire{border:1px solid var(--line)}
+  .dom{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+       border-bottom:1px solid var(--line)}
+  .dom:last-child{border-bottom:0}
+  .dom-t{padding:32px 34px; border-right:1px solid var(--line); background:var(--bg-2)}
+  .dom-t .num{font-family:var(--mono); font-size:.66rem; letter-spacing:.2em;
+              color:var(--teal); display:block; margin-bottom:12px}
+  .dom-t h3{font-family:var(--sans); font-weight:600; font-size:1.1rem; line-height:1.35;
+            letter-spacing:-.01em; margin:0}
+  .dom-s{padding:32px 34px; display:flex; flex-wrap:wrap; gap:9px; align-content:flex-start}
+  .src{font-family:var(--mono); font-size:.71rem; letter-spacing:.05em; color:var(--ink-soft);
+       border:1px solid var(--line); padding:7px 12px; line-height:1.35}
+  .src.p{color:var(--gold); border-color:color-mix(in srgb, var(--gold) 40%, transparent);
+         background:var(--gold-wash)}
+  .reserve{margin-top:34px; border:1px dashed var(--line); padding:34px;
+           text-align:center; color:var(--ink-soft)}
+  .reserve .t{font-family:var(--sans); font-weight:600; font-size:1.1rem; color:var(--ink);
+              display:block; margin-bottom:10px}
 
-  @media (max-width:760px){
-    body{font-size:17.5px}
+  /* ============ pied ============ */
+  footer{border-top:1px solid var(--line); padding:72px 0 96px; color:var(--ink-soft);
+         font-size:.97rem}
+  .pied{display:flex; flex-wrap:wrap; gap:34px 56px; justify-content:space-between}
+  .pied p{margin:0}
+  .pied .bloc{max-width:40ch}
+
+  /* ============ responsive ============ */
+  @media (max-width:820px){
+    body{font-size:17.5px; line-height:1.72}
     .wrap{padding:0 20px}
-    header{padding:64px 0 54px}
-    section{padding:56px 0}
-    .wall{grid-template-columns:1fr}
-    .wall > div:first-child{border-right:0; border-bottom:1px solid var(--line)}
-    .stats{grid-template-columns:1fr 1fr}
-    .stat{border-bottom:1px solid var(--line)}
-    .stat:nth-child(2n){border-right:0}
-    .stat:nth-last-child(-n+2){border-bottom:0}
-    .report-top,.report-body{padding-left:20px; padding-right:20px}
-    .report-date{margin-left:0; width:100%}
+    .barre-in{padding:11px 20px}
+    header.hero{padding:72px 0 64px}
+    section{padding:66px 0}
+    .titre-bloc{margin-bottom:42px}
+    .mur,.notions{grid-template-columns:1fr}
+    .mur > div,.notion{padding:30px 24px}
+    .mur > div:first-child,.notion:first-child{border-right:0; border-bottom:1px solid var(--line)}
+    .cle{margin-top:44px; padding-top:32px}
+    .chiffres{grid-template-columns:1fr 1fr}
+    .ch{padding:28px 22px; border-bottom:1px solid var(--line)}
+    .ch:nth-child(2n){border-right:0}
+    .ch:nth-last-child(-n+2){border-bottom:0}
+    .rap-h,.rap-corps{padding-left:22px; padding-right:22px}
+    .rap-date{margin-left:0; width:100%; font-size:1.3rem}
+    details.sujet > summary{padding:22px 34px 22px 0; font-size:1.05rem}
+    .sujet-corps{padding-right:0}
+    .dom{grid-template-columns:1fr}
+    .dom-t{border-right:0; border-bottom:1px solid var(--line); padding:24px 22px}
+    .dom-s{padding:22px}
+    .term-b{padding:18px 16px; font-size:.72rem; min-height:230px}
+    .term-h{padding:12px 16px; gap:10px}
+    .term-h .titre{font-size:.62rem; letter-spacing:.1em}
+    .ligne .h{display:none}
+    .reserve{padding:26px 20px}
   }
+  @media (max-width:400px){
+    .badge{padding:3px 7px; letter-spacing:.12em}
+    .horloge{font-size:.62rem}
+  }
+
   @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{animation-duration:.001ms!important; animation-iteration-count:1!important;
-                         transition-duration:.001ms!important}
-    .state .spin{border-top-color:var(--teal); opacity:.8}
+    html{scroll-behavior:auto}
+    *,*::before,*::after{
+      animation-duration:.001ms!important; animation-iteration-count:1!important;
+      transition-duration:.001ms!important}
+    .badge i,.direct i{opacity:.95}
   }
 </style>
 </head>
 <body>
 
-<header class="wrap">
+<div class="barre">
+  <div class="barre-in">
+    <span class="marque">SOS <span class="p">·</span> veille agentique</span>
+    <button class="theme-btn" id="theme-btn" type="button" aria-live="polite">
+      <svg id="theme-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+      <span id="theme-txt">Clair</span>
+    </button>
+  </div>
+</div>
+
+<header class="hero wrap">
   <div class="eyebrow"><span class="dot"></span><span class="mono">Intervention EMLV · Master RH</span></div>
-  <h1>SOS <span class="sep">·</span> un agent qui veille<br>pendant que vous <em>dormez</em></h1>
-  <p class="lede">Ce n'est pas un chatbot. Personne ne lui pose de question. Chaque dimanche à 3 h du matin, il se réveille seul, cherche sur le web, trie, écrit, <strong>puis se souvient de ce qu'il a dit la semaine d'avant</strong>.</p>
+  <h1>SOS <span class="p">·</span> un agent qui veille<br>pendant que vous <em>dormez</em></h1>
+  <p class="lede">Ce n'est pas un chatbot. Personne ne lui pose de question. Chaque dimanche à 3 h du matin, il se réveille seul, cherche sur le web, trie, écrit, <b>puis se souvient de ce qu'il a dit la semaine d'avant</b>.</p>
+  <div class="hero-meta">
+    <span class="mono">1 run par semaine</span>
+    <span class="mono">7 domaines RH</span>
+    <span class="mono">0 humain dans la boucle</span>
+  </div>
 </header>
 
 <section class="wrap">
-  <h2>Le mur</h2>
-  <p class="section-intro">Il existe une frontière nette entre les deux usages de l'IA que vous connaissez déjà et celui-ci. Elle ne passe pas là où on l'imagine.</p>
+  <div class="titre-bloc">
+    <span class="mono">01 · la frontière</span>
+    <h2>Le mur</h2>
+    <p class="chapo">Il existe une frontière nette entre l'IA que vous utilisez déjà et celle-ci. Elle ne passe pas là où on l'imagine.</p>
+  </div>
 
-  <div class="wall">
+  <div class="mur">
     <div>
       <span class="mono tag">L'IA qui répond</span>
       <h3>Vous demandez, elle répond</h3>
@@ -189,10 +408,10 @@
         <li>Le travail s'arrête quand vous vous arrêtez</li>
       </ul>
     </div>
-    <div class="is-agent">
+    <div class="agent">
       <span class="mono tag">L'IA qui agit</span>
       <h3>Elle part, elle revient avec le travail</h3>
-      <ul class="is-agent">
+      <ul>
         <li>Personne ne l'ouvre : une horloge la déclenche</li>
         <li>Elle décide seule quoi chercher, et quand relancer</li>
         <li>Elle écrit dans des fichiers qui lui survivent</li>
@@ -202,114 +421,250 @@
     </div>
   </div>
 
-  <p class="keyline">La différence n'est pas l'intelligence du modèle.<br><b>C'est le droit d'agir.</b></p>
+  <p class="cle">La différence n'est pas l'intelligence du modèle.<br><b>C'est le droit d'agir.</b></p>
 </section>
 
 <section class="wrap">
-  <h2>Une semaine dans sa vie</h2>
-  <p class="section-intro">Cinq étapes, en boucle, sans intervention humaine. Les deux étapes dorées sont celles qu'un chatbot n'a pas : se déclencher tout seul, et se souvenir.</p>
+  <div class="titre-bloc">
+    <span class="mono">02 · la méthode</span>
+    <h2>Une semaine dans sa vie</h2>
+    <p class="chapo">Cinq étapes, en boucle, sans intervention humaine. Les deux étapes dorées sont celles qu'un chatbot n'a pas : se déclencher tout seul, et se souvenir.</p>
+  </div>
 
-  <div class="cycle-frame">
+  <div class="cadre">
     <svg class="cycle" viewBox="0 0 840 620" role="img" aria-labelledby="cyc-t cyc-d">
       <title id="cyc-t">Le cycle hebdomadaire de l'agent</title>
       <desc id="cyc-d">Cinq étapes en boucle fermée : réveil le dimanche à 3 h, enquête web en deux passes, tri du signal, rédaction sourcée de cinq à huit sujets, puis mise à jour de la mémoire et autocorrection, qui ramène au réveil suivant.</desc>
-
       <defs>
-        <marker id="ar-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0 L10 5 L0 10 z" fill="#5FB0A2"></path>
-        </marker>
-        <marker id="ar-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0 L10 5 L0 10 z" fill="#D4A03F"></path>
-        </marker>
+        <marker id="ar-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"></path></marker>
       </defs>
-
-      <circle cx="420" cy="330" r="195" fill="none" stroke="#22383E" stroke-width="1" stroke-dasharray="2 7"></circle>
+      <circle cx="420" cy="330" r="195" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 7"></circle>
       <text class="c-mid" x="420" y="324" text-anchor="middle">chaque</text>
-      <text class="c-mid" x="420" y="344" text-anchor="middle" fill="#D4A03F">dimanche</text>
+      <text class="c-mid" x="420" y="344" text-anchor="middle" fill="var(--gold)">dimanche</text>
 
-      <!-- arcs, sens horaire -->
-      <path d="M 477.0 143.5 A 195 195 0 0 1 579.7 218.2" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
-      <path d="M 615.0 326.6 A 195 195 0 0 1 575.7 447.4" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
-      <path d="M 483.5 514.4 A 195 195 0 0 1 356.5 514.4" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
-      <path d="M 264.3 447.4 A 195 195 0 0 1 225.0 326.6" fill="none" stroke="#D4A03F" stroke-width="1.5" marker-end="url(#ar-gold)" opacity=".75"></path>
-      <path d="M 260.3 218.2 A 195 195 0 0 1 363.0 143.5" fill="none" stroke="#D4A03F" stroke-width="1.5" marker-end="url(#ar-gold)" opacity=".75"></path>
+      <g color="#5FB0A2" stroke="var(--teal)">
+        <path d="M 477.0 143.5 A 195 195 0 0 1 579.7 218.2" fill="none" stroke-width="1.5" marker-end="url(#ar-t)" opacity=".8"></path>
+        <path d="M 615.0 326.6 A 195 195 0 0 1 575.7 447.4" fill="none" stroke-width="1.5" marker-end="url(#ar-t)" opacity=".8"></path>
+        <path d="M 483.5 514.4 A 195 195 0 0 1 356.5 514.4" fill="none" stroke-width="1.5" marker-end="url(#ar-t)" opacity=".8"></path>
+      </g>
+      <g color="#D4A03F" stroke="var(--gold)">
+        <path d="M 264.3 447.4 A 195 195 0 0 1 225.0 326.6" fill="none" stroke-width="1.5" marker-end="url(#ar-t)" opacity=".8"></path>
+        <path d="M 260.3 218.2 A 195 195 0 0 1 363.0 143.5" fill="none" stroke-width="1.5" marker-end="url(#ar-t)" opacity=".8"></path>
+      </g>
 
-      <!-- 1 · réveil (sommet, doré) -->
-      <circle cx="420" cy="135" r="46" fill="#0F2126" stroke="#D4A03F" stroke-width="1.5"></circle>
-      <text class="n-num" x="420" y="142" text-anchor="middle" fill="#D4A03F">01</text>
+      <circle cx="420" cy="135" r="46" fill="var(--bg-2)" stroke="var(--gold)" stroke-width="1.5"></circle>
+      <text class="n-num" x="420" y="142" text-anchor="middle" fill="var(--gold)">01</text>
       <text class="n-label" x="420" y="56" text-anchor="middle">réveil</text>
-      <text class="n-sub" x="420" y="76" text-anchor="middle" fill="#D4A03F">03:00, sans personne</text>
+      <text class="n-sub" x="420" y="76" text-anchor="middle" fill="var(--gold)">03:00, sans personne</text>
 
-      <!-- 2 · enquête web (droite, teal) -->
-      <circle cx="605.5" cy="269.7" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
-      <text class="n-num" x="605.5" y="276.7" text-anchor="middle" fill="#5FB0A2">02</text>
+      <circle cx="605.5" cy="269.7" r="46" fill="var(--bg-2)" stroke="var(--teal)" stroke-width="1.5"></circle>
+      <text class="n-num" x="605.5" y="276.7" text-anchor="middle" fill="var(--teal)">02</text>
       <text class="n-label" x="665.5" y="264" text-anchor="start">enquête web</text>
       <text class="n-sub" x="665.5" y="284" text-anchor="start">deux passes</text>
 
-      <!-- 3 · tri du signal (bas droite, teal) -->
-      <circle cx="534.6" cy="487.8" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
-      <text class="n-num" x="534.6" y="494.8" text-anchor="middle" fill="#5FB0A2">03</text>
+      <circle cx="534.6" cy="487.8" r="46" fill="var(--bg-2)" stroke="var(--teal)" stroke-width="1.5"></circle>
+      <text class="n-num" x="534.6" y="494.8" text-anchor="middle" fill="var(--teal)">03</text>
       <text class="n-label" x="534.6" y="562" text-anchor="middle">tri du signal</text>
       <text class="n-sub" x="534.6" y="581" text-anchor="middle">le bruit sort</text>
 
-      <!-- 4 · rédaction (bas gauche, teal) -->
-      <circle cx="305.4" cy="487.8" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
-      <text class="n-num" x="305.4" y="494.8" text-anchor="middle" fill="#5FB0A2">04</text>
+      <circle cx="305.4" cy="487.8" r="46" fill="var(--bg-2)" stroke="var(--teal)" stroke-width="1.5"></circle>
+      <text class="n-num" x="305.4" y="494.8" text-anchor="middle" fill="var(--teal)">04</text>
       <text class="n-label" x="305.4" y="562" text-anchor="middle">rédaction sourcée</text>
       <text class="n-sub" x="305.4" y="581" text-anchor="middle">5 à 8 sujets</text>
 
-      <!-- 5 · mémoire (gauche, doré) -->
-      <circle cx="234.5" cy="269.7" r="46" fill="#0F2126" stroke="#D4A03F" stroke-width="1.5"></circle>
-      <text class="n-num" x="234.5" y="276.7" text-anchor="middle" fill="#D4A03F">05</text>
+      <circle cx="234.5" cy="269.7" r="46" fill="var(--bg-2)" stroke="var(--gold)" stroke-width="1.5"></circle>
+      <text class="n-num" x="234.5" y="276.7" text-anchor="middle" fill="var(--gold)">05</text>
       <text class="n-label" x="174.5" y="264" text-anchor="end">mémoire</text>
-      <text class="n-sub" x="174.5" y="284" text-anchor="end" fill="#D4A03F">et autocorrection</text>
+      <text class="n-sub" x="174.5" y="284" text-anchor="end" fill="var(--gold)">et autocorrection</text>
     </svg>
   </div>
-</section>
 
-<section class="wrap">
-  <h2>Ce que ça donne</h2>
-  <p class="section-intro">Les chiffres d'un run réel, pas d'une démo.</p>
-  <div class="stats">
-    <div class="stat"><span class="v">26</span><span class="k">recherches web sur un seul run</span></div>
-    <div class="stat teal"><span class="v">0</span><span class="k">humain dans la boucle</span></div>
-    <div class="stat"><span class="v">7</span><span class="k">domaines RH couverts</span></div>
-    <div class="stat teal"><span class="v">&#8734;</span><span class="k">mémoire cumulée, rien n'est oublié d'une semaine sur l'autre</span></div>
+  <div class="legende">
+    <span><i class="puce" style="background:#D4A03F"></i><span class="mono">ce qu'un chatbot ne fait pas</span></span>
+    <span><i class="puce" style="background:#5FB0A2"></i><span class="mono">le travail de veille</span></span>
   </div>
 </section>
 
 <section class="wrap">
-  <div class="report-head">
-    <div>
-      <h2>Le dernier rapport</h2>
-      <p class="section-intro" style="margin-bottom:0">Ce bloc n'est pas une capture d'écran. Il va chercher, maintenant, le fichier le plus récent produit par l'agent.</p>
+  <div class="titre-bloc">
+    <span class="mono">03 · au travail</span>
+    <h2>Ce qu'il fait, ligne à ligne</h2>
+    <p class="chapo">Voici le déroulé d'un run, reconstitué à partir des traces d'un vrai passage de l'agent.</p>
+  </div>
+
+  <div class="term">
+    <div class="term-h">
+      <span class="titre">agent-veille · run hebdomadaire</span>
+      <span class="badge"><i></i>Simulation</span>
+      <span class="horloge" id="horloge">--:--:--</span>
+    </div>
+    <div class="term-b" id="term-b" aria-hidden="true"></div>
+  </div>
+  <p class="note">Reconstitution à but pédagogique, rejouée en boucle. Les journaux réels de chaque run sont dans l'onglet <a href="https://github.com/cheznola/sos-veille/actions">Actions du repo</a>.</p>
+</section>
+
+<section class="wrap">
+  <div class="titre-bloc">
+    <span class="mono">04 · où ça vit</span>
+    <h2>GitHub, et le repo</h2>
+    <p class="chapo">Deux mots reviennent partout sur cette page. Si vous n'êtes pas du métier, voici ce qu'ils désignent.</p>
+  </div>
+
+  <div class="notions">
+    <div class="notion">
+      <span class="mono">La plateforme</span>
+      <h3>GitHub</h3>
+      <p>GitHub est un site où des projets informatiques sont stockés, versionnés et rendus publics. Chacun peut y lire le code, voir qui a modifié quoi, et à quelle date.</p>
+      <p>Ce n'est pas qu'une bibliothèque : GitHub sait aussi <b>exécuter</b> des programmes sur ses propres machines, à l'heure qu'on lui indique. C'est ce qui permet à l'agent de se réveiller le dimanche sans qu'aucun ordinateur soit allumé chez qui que ce soit.</p>
+      <p style="margin-bottom:0">Le service est gratuit pour un projet public comme celui-ci.</p>
+    </div>
+    <div class="notion">
+      <span class="mono">Le projet</span>
+      <h3>Un repo</h3>
+      <p>Un repo (abréviation de <i>repository</i>, le mot anglais pour dépôt) est le dossier d'un projet sur GitHub. Il contient tous ses fichiers : le code, les textes, les résultats.</p>
+      <p>Sa particularité : il garde <b>tout l'historique</b>. Chaque modification est enregistrée avec sa date et son auteur, et rien ne s'efface. On peut donc remonter le temps et voir l'état du projet à n'importe quelle date.</p>
+      <div class="ill">
+        sos-veille/<br>
+        &nbsp;&nbsp;<b>moteur.md</b> &nbsp;la méthode de veille<br>
+        &nbsp;&nbsp;<b>domaines/</b> &nbsp;les sujets et les sources<br>
+        &nbsp;&nbsp;<b>etat/</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;la mémoire de l'agent<br>
+        &nbsp;&nbsp;<b>rapports/</b> &nbsp;un fichier par semaine
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="titre-bloc">
+    <span class="mono">05 · les chiffres</span>
+    <h2>Ce que ça donne</h2>
+    <p class="chapo">Relevés sur un run réel, pas sur une démonstration.</p>
+  </div>
+  <div class="chiffres">
+    <div class="ch"><span class="v">26</span><span class="k">recherches web sur un seul run</span></div>
+    <div class="ch t"><span class="v">0</span><span class="k">humain dans la boucle</span></div>
+    <div class="ch"><span class="v">7</span><span class="k">domaines RH couverts</span></div>
+    <div class="ch t"><span class="v">&#8734;</span><span class="k">mémoire cumulée, rien n'est oublié d'une semaine sur l'autre</span></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="titre-bloc">
+    <span class="mono">06 · la production</span>
+    <h2>Le dernier rapport</h2>
+    <p class="chapo">Ce bloc n'est pas une capture d'écran. Il va chercher, maintenant, le fichier le plus récent produit par l'agent dans son repo. Chaque sujet se déplie.</p>
+  </div>
+
+  <div class="rap">
+    <div class="rap-h">
+      <div class="rap-h-top">
+        <span class="direct"><i></i><span class="mono">chargé en direct depuis le repo</span></span>
+        <span class="rap-date" id="rap-date"></span>
+      </div>
+      <div class="resume" id="rap-resume"></div>
+    </div>
+
+    <div id="rap-etat" class="etat">
+      <div class="tourne"></div>
+      <span class="mono">récupération du dernier rapport</span>
+    </div>
+
+    <div class="rap-corps" id="rap-corps" hidden></div>
+  </div>
+
+  <p style="margin-top:28px"><a href="https://github.com/cheznola/sos-veille/tree/main/rapports">Voir tous les rapports &rsaquo;</a></p>
+</section>
+
+<section class="wrap">
+  <div class="titre-bloc">
+    <span class="mono">07 · l'annuaire</span>
+    <h2>Les sources que consulte l'agent</h2>
+    <p class="chapo">Il ne cherche pas au hasard. Chaque domaine porte sa liste de sources de référence, écrite à la main dans le repo. En doré, les sources primaires : textes officiels et organismes qui produisent la donnée.</p>
+  </div>
+
+  <div class="annuaire">
+    <div class="dom">
+      <div class="dom-t"><span class="num">01</span><h3>Droit du travail et cadre réglementaire</h3></div>
+      <div class="dom-s">
+        <span class="src p">Légifrance</span><span class="src p">Journal officiel</span>
+        <span class="src p">Cour de cassation, chambre sociale</span><span class="src p">Ministère du Travail</span>
+        <span class="src p">Conseil constitutionnel</span><span class="src">Liaisons Sociales</span>
+        <span class="src">actuEL RH</span><span class="src">Éditions Tissot</span>
+        <span class="src">Village de la Justice</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">02</span><h3>IA et automatisation dans la fonction RH</h3></div>
+      <div class="dom-s">
+        <span class="src p">CNIL</span><span class="src p">Commission européenne, AI Act</span>
+        <span class="src p">Comité européen de la protection des données</span>
+        <span class="src p">Dares</span><span class="src">ANDRH</span>
+        <span class="src">Publications académiques francophones</span>
+        <span class="src">Retours d'expérience d'entreprises nommées</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">03</span><h3>Recrutement et marché de l'emploi</h3></div>
+      <div class="dom-s">
+        <span class="src p">Dares</span><span class="src p">France Travail, enquêtes BMO</span>
+        <span class="src p">Insee</span><span class="src p">Apec</span>
+        <span class="src">Baromètres sectoriels sourcés</span>
+        <span class="src">HelloWork</span><span class="src">Welcome to the Jungle Lab</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">04</span><h3>Formation professionnelle et compétences</h3></div>
+      <div class="dom-s">
+        <span class="src p">Centre Inffo</span><span class="src p">France compétences</span>
+        <span class="src p">DGEFP</span><span class="src p">Caisse des Dépôts, CPF</span>
+        <span class="src p">OPCO</span><span class="src p">Ministère du Travail</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">05</span><h3>Organisation et conditions de travail</h3></div>
+      <div class="dom-s">
+        <span class="src p">Anact</span><span class="src p">Dares</span><span class="src p">INRS</span>
+        <span class="src">ANDRH</span><span class="src">Accords d'entreprise rendus publics</span>
+        <span class="src">Études d'organismes paritaires</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">06</span><h3>Paie, rémunération et protection sociale</h3></div>
+      <div class="dom-s">
+        <span class="src p">Urssaf</span><span class="src p">Sécurité sociale</span>
+        <span class="src p">Boss, bulletin officiel de la sécurité sociale</span>
+        <span class="src p">Unédic</span><span class="src p">Ministère de l'Économie</span>
+        <span class="src p">Journal officiel</span>
+      </div>
+    </div>
+    <div class="dom">
+      <div class="dom-t"><span class="num">07</span><h3>Emploi des jeunes, alternance et relation école-entreprise</h3></div>
+      <div class="dom-s">
+        <span class="src p">Dares</span><span class="src p">France compétences</span>
+        <span class="src p">Céreq</span><span class="src p">Apec, insertion des jeunes diplômés</span>
+        <span class="src p">Ministère de l'Enseignement supérieur</span>
+        <span class="src p">France Travail</span><span class="src">Conférence des grandes écoles</span>
+      </div>
     </div>
   </div>
 
-  <div class="report-card">
-    <div class="report-top">
-      <span class="live"><span class="pulse"></span><span class="mono">chargé en direct depuis le dépôt</span></span>
-      <span class="report-date" id="report-date"></span>
-    </div>
-
-    <div id="report-state" class="state">
-      <div class="spin"></div>
-      <span class="mono">récupération du dernier rapport…</span>
-    </div>
-
-    <div class="report-body md" id="report-body" hidden></div>
+  <div class="reserve">
+    <span class="t">Bientôt : proposez une source, l'agent vous répondra</span>
+    <span class="mono">emplacement réservé</span>
   </div>
-
-  <p style="margin-top:24px"><a href="https://github.com/cheznola/sos-veille/tree/main/rapports">Voir tous les rapports &rarr;</a></p>
 </section>
 
 <footer class="wrap">
-  <div class="foot-grid">
-    <div>
-      <span class="mono" style="display:block; margin-bottom:10px">SOS · système de veille agentique</span>
-      Intervention EMLV — Master RH.<br>Le code, la méthode et tous les rapports sont publics.
+  <div class="pied">
+    <div class="bloc">
+      <span class="mono" style="display:block; margin-bottom:14px">SOS · système de veille agentique</span>
+      <p>Intervention EMLV, master RH. Le code, la méthode et tous les rapports sont publics.</p>
     </div>
-    <div><a href="https://github.com/cheznola/sos-veille">github.com/cheznola/sos-veille</a></div>
+    <div class="bloc">
+      <span class="mono" style="display:block; margin-bottom:14px">Le repo</span>
+      <p><a href="https://github.com/cheznola/sos-veille">github.com/cheznola/sos-veille</a></p>
+    </div>
   </div>
 </footer>
 
@@ -317,13 +672,142 @@
 <script>
 (function () {
   "use strict";
+
+  /* ============================================================
+     1. Bascule de thème
+     ============================================================ */
+  var htmlEl = document.documentElement;
+  var btn = document.getElementById("theme-btn");
+  var txt = document.getElementById("theme-txt");
+  var ico = document.getElementById("theme-ico");
+  var LUNE = "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z";
+  var SOLEIL = "M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4";
+
+  function themeActif() {
+    var pose = htmlEl.getAttribute("data-theme");
+    if (pose) { return pose; }
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  function peindreBouton() {
+    var clair = themeActif() === "light";
+    txt.textContent = clair ? "Sombre" : "Clair";
+    btn.setAttribute("aria-label", clair ? "Passer en thème sombre" : "Passer en thème clair");
+    ico.innerHTML = '<path d="' + (clair ? LUNE : SOLEIL) + '"></path>';
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) { meta.setAttribute("content", clair ? "#F6F2E9" : "#0B181C"); }
+  }
+  btn.addEventListener("click", function () {
+    var suivant = themeActif() === "light" ? "dark" : "light";
+    htmlEl.setAttribute("data-theme", suivant);
+    try { localStorage.setItem("sos-theme", suivant); } catch (e) { /* ignoré */ }
+    peindreBouton();
+  });
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
+    if (!htmlEl.getAttribute("data-theme")) { peindreBouton(); }
+  });
+  peindreBouton();
+
+  /* ============================================================
+     2. Terminal simulé
+     ============================================================ */
+  var LIGNES = [
+    "réveil programmé [[03:00]], aucune intervention humaine",
+    "lecture de moteur.md, domaines/rh-etudiant.md, profil.md",
+    "lecture de la mémoire : [[4 sujets suivis]] la semaine dernière",
+    "recherche : [[droit du travail]], passe 1, large",
+    "12 résultats, jugement : bruit dominant, requête reformulée",
+    "recherche : [[droit du travail]], passe 2, ciblée",
+    "tri : [[3 signaux]] retenus, 11 bruits écartés",
+    "recherche : [[IA et automatisation RH]], passe 1",
+    "source primaire confirmée : Journal officiel, 24 juillet 2026",
+    "recherche : [[formation professionnelle]], passe 2",
+    "doublon : sujet déjà signalé le 16 août, statut inchangé, écarté",
+    "recherche : [[emploi des jeunes]], passe 1, aucun fait nouveau",
+    "sélection close : [[5 sujets]] sur 7 domaines couverts",
+    "rédaction de la note, chaque sujet adossé à sa source",
+    "vérification : [[0 URL]] non confirmée",
+    "mémoire mise à jour : [[6 sujets suivis]], 1 clos",
+    "écriture rapports/2026-08-23.md, [[8 016 octets]]",
+    "commit [[551fe5b]] : veille: rapport du 2026-08-23",
+    "push origin main, run terminé en [[615 s]]",
+    "prochain réveil : dimanche [[03:00]]"
+  ];
+  var MAX_VISIBLE = 6;
+  var corpsTerm = document.getElementById("term-b");
+  var horloge = document.getElementById("horloge");
+  var curseur = 0;
+
+  function heureCourte(d) {
+    return String(d.getHours()).padStart(2, "0") + ":" +
+           String(d.getMinutes()).padStart(2, "0") + ":" +
+           String(d.getSeconds()).padStart(2, "0");
+  }
+  function tictac() {
+    if (horloge) { horloge.textContent = heureCourte(new Date()); }
+  }
+  tictac();
+  setInterval(tictac, 1000);
+
+  function fabriquer(brut) {
+    var el = document.createElement("div");
+    el.className = "ligne neuve";
+
+    var fl = document.createElement("span");
+    fl.className = "fl"; fl.textContent = ">";
+    el.appendChild(fl);
+
+    var h = document.createElement("span");
+    h.className = "h"; h.textContent = heureCourte(new Date());
+    el.appendChild(h);
+
+    var t = document.createElement("span");
+    t.className = "t";
+    brut.split(/(\[\[[^\]]*\]\])/).forEach(function (bout) {
+      if (!bout) { return; }
+      if (bout.indexOf("[[") === 0) {
+        var k = document.createElement("span");
+        k.className = "k"; k.textContent = bout.slice(2, -2);
+        t.appendChild(k);
+      } else {
+        t.appendChild(document.createTextNode(bout));
+      }
+    });
+    el.appendChild(t);
+    return el;
+  }
+
+  function ajouter() {
+    var el = fabriquer(LIGNES[curseur % LIGNES.length]);
+    curseur += 1;
+    corpsTerm.insertBefore(el, corpsTerm.firstChild);
+    while (corpsTerm.children.length > MAX_VISIBLE) {
+      corpsTerm.removeChild(corpsTerm.lastChild);
+    }
+    Array.prototype.forEach.call(corpsTerm.children, function (n, i) {
+      n.style.opacity = i === 0 ? "1" : String(Math.max(0.2, 0.78 - i * 0.14));
+      if (i > 0) { n.classList.remove("neuve"); }
+    });
+  }
+
+  // Une seule chaîne de minuteries : chaque tour programme le suivant, jamais plus.
+  function boucle() {
+    ajouter();
+    setTimeout(boucle, 3000 + Math.random() * 2000);
+  }
+  for (var d = 0; d < 3; d += 1) { ajouter(); }
+  setTimeout(boucle, 1400);
+
+  /* ============================================================
+     3. Le dernier rapport, chargé depuis le repo
+     ============================================================ */
   var REPO = "cheznola/sos-veille";
   var DOSSIER = "rapports";
   var LIEN = "https://github.com/" + REPO + "/tree/main/" + DOSSIER;
 
-  var elState = document.getElementById("report-state");
-  var elBody  = document.getElementById("report-body");
-  var elDate  = document.getElementById("report-date");
+  var elEtat = document.getElementById("rap-etat");
+  var elCorps = document.getElementById("rap-corps");
+  var elDate = document.getElementById("rap-date");
+  var elResume = document.getElementById("rap-resume");
 
   var MOIS = ["janvier","février","mars","avril","mai","juin",
               "juillet","août","septembre","octobre","novembre","décembre"];
@@ -333,31 +817,23 @@
     if (!m) { return nom; }
     return parseInt(m[3], 10) + " " + MOIS[parseInt(m[2], 10) - 1] + " " + m[1];
   }
-
-  function afficherEtat(html, classe) {
-    elState.className = "state" + (classe ? " " + classe : "");
-    elState.innerHTML = html;
-    elState.hidden = false;
-    elBody.hidden = true;
-  }
-
   function echapper(s) {
-    return s.replace(/[&<>"']/g, function (c) {
+    return String(s).replace(/[&<>"']/g, function (c) {
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
     });
   }
 
   // Le rapport est écrit par un modèle : on ne lui fait pas confiance pour du HTML.
   function assainir(racine) {
-    racine.querySelectorAll("script, style, iframe, object, embed, form, link").forEach(function (n) {
-      n.remove();
-    });
+    racine.querySelectorAll("script, style, iframe, object, embed, form, link, meta, base")
+      .forEach(function (n) { n.remove(); });
     racine.querySelectorAll("*").forEach(function (n) {
       Array.prototype.slice.call(n.attributes).forEach(function (a) {
         var nom = a.name.toLowerCase();
-        var val = (a.value || "").trim().toLowerCase();
+        var val = (a.value || "").trim().toLowerCase().replace(/\s/g, "");
         if (nom.indexOf("on") === 0) { n.removeAttribute(a.name); }
-        if ((nom === "href" || nom === "src") && val.indexOf("javascript:") === 0) {
+        if ((nom === "href" || nom === "src" || nom === "xlink:href") &&
+            (val.indexOf("javascript:") === 0 || val.indexOf("data:text/html") === 0)) {
           n.removeAttribute(a.name);
         }
       });
@@ -368,44 +844,162 @@
     });
   }
 
-  function rendre(markdown, nomFichier) {
-    elDate.textContent = enFrancais(nomFichier);
-
+  function versHtml(markdown) {
+    var hote = document.createElement("div");
+    hote.className = "md";
     if (typeof window.marked !== "undefined" && window.marked.parse) {
-      elBody.innerHTML = window.marked.parse(markdown, { breaks: false, gfm: true });
-      assainir(elBody);
-      // Le rapport porte déjà son propre titre : on retire le doublon.
-      var premier = elBody.firstElementChild;
-      if (premier && premier.tagName === "H1") { premier.remove(); }
+      hote.innerHTML = window.marked.parse(markdown, { gfm: true, breaks: false });
+      assainir(hote);
     } else {
-      // marked.js n'a pas pu être chargé : on affiche le markdown brut, lisible.
-      elBody.innerHTML = '<pre class="fallback">' + echapper(markdown) + "</pre>";
+      hote.innerHTML = '<pre class="brut">' + echapper(markdown) + "</pre>";
     }
-
-    elState.hidden = true;
-    elBody.hidden = false;
+    return hote;
   }
 
+  // Découpe le rapport sur ses titres de niveau 2.
+  function decouper(markdown) {
+    var morceaux = markdown.split(/^##[ \t]+/m);
+    var preambule = morceaux.shift() || "";
+    var sections = morceaux.map(function (bloc) {
+      var saut = bloc.indexOf("\n");
+      if (saut === -1) { return { titre: bloc.trim(), corps: "" }; }
+      return { titre: bloc.slice(0, saut).trim(), corps: bloc.slice(saut + 1).trim() };
+    });
+    return { preambule: preambule.replace(/^#[ \t]+.*$/m, "").trim(), sections: sections };
+  }
+
+  // Récupère la valeur d'un champ **LABEL** suivi de ":", "-" ou d'un tiret long.
+  function champ(corps, label) {
+    var re = new RegExp("\\*\\*" + label + "\\*\\*\\s*[:\\-\\u2013\\u2014]?\\s*([^\\n]+)");
+    var m = re.exec(corps);
+    return m ? m[1].trim() : "";
+  }
+
+  function estAction(titre) { return /^ce que tu peux en faire/i.test(titre); }
+  function estRevision(titre) { return /^r[ée]vision/i.test(titre); }
+
+  function pastille(texte, fort) {
+    var s = document.createElement("span");
+    s.className = "pastille" + (fort ? " fort" : "");
+    s.textContent = texte;
+    return s;
+  }
+
+  function rendre(markdown, nomFichier) {
+    var d = decouper(markdown);
+    elDate.textContent = enFrancais(nomFichier);
+
+    var sujets = d.sections.filter(function (s) {
+      return !estAction(s.titre) && !estRevision(s.titre);
+    });
+    var actions = d.sections.filter(function (s) { return estAction(s.titre); });
+    var revisions = d.sections.filter(function (s) { return estRevision(s.titre); });
+
+    // Résumé compact, dérivé du contenu réel plutôt que de la prose du modèle.
+    var domaines = [];
+    sujets.forEach(function (s) {
+      var dom = champ(s.corps, "DOMAINE");
+      if (dom && domaines.indexOf(dom) === -1) { domaines.push(dom); }
+    });
+    elResume.innerHTML = "";
+    elResume.appendChild(pastille(sujets.length + (sujets.length > 1 ? " sujets retenus" : " sujet retenu"), true));
+    if (revisions.length) { elResume.appendChild(pastille(revisions.length + " révision", true)); }
+    domaines.forEach(function (dom) { elResume.appendChild(pastille(dom, false)); });
+    if (!domaines.length) { elResume.appendChild(pastille("domaines non renseignés", false)); }
+
+    elCorps.innerHTML = "";
+
+    revisions.forEach(function (s) {
+      var d2 = document.createElement("details");
+      d2.className = "sujet"; d2.open = true;
+      var sm = document.createElement("summary");
+      sm.textContent = s.titre;
+      var meta = document.createElement("span");
+      meta.className = "sujet-meta"; meta.textContent = "correction d'un rapport passé";
+      sm.appendChild(meta);
+      d2.appendChild(sm);
+      var c = document.createElement("div"); c.className = "sujet-corps";
+      c.appendChild(versHtml(s.corps)); d2.appendChild(c);
+      elCorps.appendChild(d2);
+    });
+
+    sujets.forEach(function (s, i) {
+      var det = document.createElement("details");
+      det.className = "sujet";
+      if (i === 0) { det.open = true; }
+
+      var sum = document.createElement("summary");
+      sum.appendChild(document.createTextNode(s.titre));
+      var meta = document.createElement("span");
+      meta.className = "sujet-meta";
+      var bouts = [];
+      var dom = champ(s.corps, "DOMAINE"); if (dom) { bouts.push(dom); }
+      var st = champ(s.corps, "STATUT"); if (st) { bouts.push(st); }
+      meta.textContent = bouts.join("  ·  ");
+      if (bouts.length) { sum.appendChild(meta); }
+      det.appendChild(sum);
+
+      var corps = document.createElement("div");
+      corps.className = "sujet-corps";
+      corps.appendChild(versHtml(s.corps));
+      det.appendChild(corps);
+      elCorps.appendChild(det);
+    });
+
+    actions.forEach(function (s) {
+      var det = document.createElement("details");
+      det.className = "simple"; det.open = true;
+      var sum = document.createElement("summary");
+      sum.textContent = s.titre;
+      det.appendChild(sum);
+      var corps = document.createElement("div");
+      corps.className = "simple-corps";
+      corps.appendChild(versHtml(s.corps));
+      det.appendChild(corps);
+      elCorps.appendChild(det);
+    });
+
+    if (d.preambule) {
+      var det2 = document.createElement("details");
+      det2.className = "simple";
+      var sum2 = document.createElement("summary");
+      sum2.textContent = "Périmètre et journal technique du run";
+      det2.appendChild(sum2);
+      var c2 = document.createElement("div");
+      c2.className = "simple-corps";
+      c2.appendChild(versHtml(d.preambule));
+      det2.appendChild(c2);
+      elCorps.appendChild(det2);
+    }
+
+    elEtat.hidden = true;
+    elCorps.hidden = false;
+  }
+
+  function afficherEtat(html, classe) {
+    elEtat.className = "etat" + (classe ? " " + classe : "");
+    elEtat.innerHTML = html;
+    elEtat.hidden = false;
+    elCorps.hidden = true;
+  }
   function echouer(raison) {
     afficherEtat(
-      '<span class="mark">rapport indisponible</span>' +
-      "<p>Impossible de joindre le dépôt à l'instant (" + echapper(raison) + ").</p>" +
-      '<p style="margin-bottom:0"><a href="' + LIEN + '">Lire les rapports directement sur GitHub &rarr;</a></p>',
+      '<span class="marque-err">rapport indisponible</span>' +
+      "<p>Impossible de joindre le repo à l'instant (" + echapper(raison) + ").</p>" +
+      '<p style="margin-bottom:0"><a href="' + LIEN + '">Lire les rapports directement sur GitHub &rsaquo;</a></p>',
       "err"
     );
   }
-
   function enAttente() {
     afficherEtat(
-      '<span class="mono" style="display:block; margin-bottom:14px">en attente du premier run</span>' +
+      '<span class="mono" style="display:block; margin-bottom:16px">en attente du premier run</span>' +
       "<p>L'agent n'a pas encore publié de rapport. Le prochain réveil est prévu dimanche à 3 h.</p>" +
-      '<p style="margin-bottom:0"><a href="' + LIEN + '">Suivre le dossier des rapports &rarr;</a></p>'
+      '<p style="margin-bottom:0"><a href="' + LIEN + '">Suivre le dossier des rapports &rsaquo;</a></p>'
     );
   }
 
-  fetch("https://api.github.com/repos/" + REPO + "/contents/" + DOSSIER, {
-    headers: { "Accept": "application/vnd.github+json" }
-  })
+  fetch("https://api.github.com/repos/" + REPO + "/contents/" + DOSSIER,
+        { headers: { "Accept": "application/vnd.github+json" } })
     .then(function (r) {
       if (!r.ok) { throw new Error("HTTP " + r.status); }
       return r.json();
