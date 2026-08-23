@@ -409,6 +409,140 @@ verifier("un domaine muet n'a aucune source productive",
          perf.count("Sources les plus productives : aucune à ce jour") == 6)
 
 
+print("\n[12] Bloc EVOLUTIONS : optionnel, contrairement aux quatre autres")
+verifier("EVOLUTIONS est declaré optionnel",
+         "===EVOLUTIONS===" in run.MARQUEURS_OPTIONNELS)
+verifier("les quatre autres restent obligatoires",
+         run.MARQUEURS_OBLIGATOIRES == ("===RAPPORT===", "===SUJETS-SUIVIS===",
+                                        "===CORRECTIONS===", "===BILAN==="))
+d = run.decouper_blocs(bien_formee())
+verifier("son absence ne fait pas échouer le découpage", "EVOLUTIONS" not in d)
+
+EVO_VALIDE = (
+    "[[EVOLUTION: domaines/rh-etudiant.md]]\n"
+    "TYPE: retrait de source\n"
+    "ACTUEL:\n<<<\nVillage de la Justice\n>>>\n"
+    "NOUVEAU:\n<<<\nÉditions Législatives\n>>>\n"
+    "JUSTIFICATION:\n<<<\nCette source figure en référence du domaine 1 depuis "
+    "11 runs et n'a produit aucun sujet retenu.\n>>>\n"
+    "[[/EVOLUTION]]"
+)
+avec_evo = bien_formee() + "\n===EVOLUTIONS===\n" + EVO_VALIDE
+d = run.decouper_blocs(avec_evo)
+verifier("le bloc optionnel est extrait quand il est là", d["EVOLUTIONS"] == EVO_VALIDE)
+verifier("les quatre obligatoires restent intacts",
+         (d["RAPPORT"], d["SUJETS-SUIVIS"], d["CORRECTIONS"], d["BILAN"]) == CORPS)
+
+doit_echouer("EVOLUTIONS présent mais vide",
+             lambda: run.decouper_blocs(bien_formee() + "\n===EVOLUTIONS===\n"))
+doit_echouer("EVOLUTIONS placé avant BILAN", lambda: run.decouper_blocs(
+    f"===RAPPORT===\n{CORPS[0]}\n===SUJETS-SUIVIS===\n{CORPS[1]}\n"
+    f"===CORRECTIONS===\n{CORPS[2]}\n===EVOLUTIONS===\n{EVO_VALIDE}\n"
+    f"===BILAN===\n{CORPS[3]}"))
+doit_echouer("EVOLUTIONS en double",
+             lambda: run.decouper_blocs(avec_evo + "\n===EVOLUTIONS===\nautre"))
+
+
+print("\n[13] Évolutions : validation avant toute écriture")
+verifier("AUCUNE ne produit aucune évolution", run.analyser_evolutions("AUCUNE") == [])
+evos = run.analyser_evolutions(EVO_VALIDE)
+verifier("une évolution valide est acceptée", len(evos) == 1)
+verifier("le fichier visé est résolu", evos[0]["cible"] == "domaines/rh-etudiant.md")
+verifier("le type est normalisé", evos[0]["type"] == "retrait de source")
+verifier("la justification est conservée", "11 runs" in evos[0]["justification"])
+
+
+print("\n[14] Chemins interdits : la constitution est hors de portée")
+def evo(cible, actuel="Village de la Justice", nouveau="autre chose",
+        type_="retrait de source", justification="12 runs sans un seul sujet retenu."):
+    return (
+        f"[[EVOLUTION: {cible}]]\nTYPE: {type_}\n"
+        f"ACTUEL:\n<<<\n{actuel}\n>>>\n"
+        f"NOUVEAU:\n<<<\n{nouveau}\n>>>\n"
+        f"JUSTIFICATION:\n<<<\n{justification}\n>>>\n[[/EVOLUTION]]"
+    )
+
+for interdit in (
+    "constitution.md",
+    "profil.md",
+    "scripts/run.py",
+    "scripts/test_parsing.py",
+    ".github/workflows/veille.yml",
+    "README.md",
+    "etat/performance.md",
+    "rapports/2026-08-23.md",
+    "../../../etc/passwd",
+    "domaines/../constitution.md",
+    "./constitution.md",
+    "/etc/passwd",
+):
+    doit_echouer(f"évolution visant {interdit}", lambda c=interdit: run.analyser_evolutions(evo(c)))
+
+verifier("les deux seuls fichiers évoluables sont moteur.md et le domaine",
+         tuple(c.name for c in run.FICHIERS_EVOLUABLES) == ("moteur.md", "rh-etudiant.md"))
+
+
+print("\n[15] Évolutions mal formées : le run échoue, rien n'est écrit partiellement")
+doit_echouer("bloc ni AUCUNE ni balisé", lambda: run.analyser_evolutions("il faudrait revoir les sources"))
+doit_echouer("champ TYPE absent", lambda: run.analyser_evolutions(
+    "[[EVOLUTION: moteur.md]]\nACTUEL:\n<<<\nx\n>>>\nNOUVEAU:\n<<<\ny\n>>>\n"
+    "JUSTIFICATION:\n<<<\nz\n>>>\n[[/EVOLUTION]]"))
+doit_echouer("champ JUSTIFICATION absent", lambda: run.analyser_evolutions(
+    "[[EVOLUTION: moteur.md]]\nTYPE: pondération\nACTUEL:\n<<<\nx\n>>>\n"
+    "NOUVEAU:\n<<<\ny\n>>>\n[[/EVOLUTION]]"))
+doit_echouer("type d'évolution inconnu",
+             lambda: run.analyser_evolutions(evo("moteur.md", type_="refonte totale")))
+doit_echouer("justification vide",
+             lambda: run.analyser_evolutions(evo("moteur.md", justification="")))
+doit_echouer("ACTUEL vide", lambda: run.analyser_evolutions(evo("moteur.md", actuel="")))
+doit_echouer("ACTUEL introuvable dans le fichier visé",
+             lambda: run.analyser_evolutions(evo("moteur.md", actuel="une règle qui n'existe pas")))
+doit_echouer("ACTUEL présent plusieurs fois donc ambigu",
+             lambda: run.analyser_evolutions(evo("domaines/rh-etudiant.md", actuel="Dares")))
+doit_echouer("ACTUEL et NOUVEAU identiques", lambda: run.analyser_evolutions(
+    evo("domaines/rh-etudiant.md", actuel="Village de la Justice",
+        nouveau="Village de la Justice")))
+
+melange = EVO_VALIDE + "\n\n" + evo("constitution.md")
+avant = run.DOMAINE.read_bytes()
+doit_echouer("un lot dont une seule évolution est interdite",
+             lambda: run.analyser_evolutions(melange))
+verifier("le fichier légitime du lot n'a pas été touché", run.DOMAINE.read_bytes() == avant)
+
+
+print("\n[16] Application et archivage des évolutions")
+avant_domaine = run.DOMAINE.read_bytes()
+avant_moteur = run.MOTEUR.read_bytes()
+try:
+    archives = run.appliquer_evolutions(run.analyser_evolutions(EVO_VALIDE), "2026-09-06")
+    verifier("une archive par évolution", archives == ["evolutions/2026-09-06-01.md"])
+    contenu = run.DOMAINE.read_text(encoding="utf-8")
+    verifier("la règle a été remplacée dans le fichier", "Éditions Législatives" in contenu)
+    verifier("l'ancienne règle a disparu", "Village de la Justice" not in contenu)
+
+    archive = (run.EVOLUTIONS / "2026-09-06-01.md").read_text(encoding="utf-8")
+    verifier("l'archive porte la date", "Évolution du 2026-09-06" in archive)
+    verifier("l'archive porte le fichier visé", "domaines/rh-etudiant.md" in archive)
+    verifier("l'archive porte l'avant", "## Avant" in archive and "Village de la Justice" in archive)
+    verifier("l'archive porte l'après", "## Après" in archive and "Éditions Législatives" in archive)
+    verifier("l'archive porte la justification", "11 runs" in archive)
+    verifier("l'archive rappelle que c'est réversible", "réversible" in archive)
+
+    verifier("aucune évolution ne produit aucune archive",
+             run.appliquer_evolutions([], "2026-09-06") == [])
+finally:
+    run.DOMAINE.write_bytes(avant_domaine)
+    run.MOTEUR.write_bytes(avant_moteur)
+    (run.EVOLUTIONS / "2026-09-06-01.md").unlink(missing_ok=True)
+
+suppression = evo("domaines/rh-etudiant.md", actuel="Village de la Justice", nouveau="")
+evos = run.analyser_evolutions(suppression)
+verifier("un NOUVEAU vide est accepté : c'est ainsi qu'on supprime une source",
+         evos[0]["nouveau"].strip() == "")
+verifier("l'archive d'une suppression le dit explicitement",
+         "(règle supprimée)" in run.rendre_evolution(evos[0], "2026-09-06", 1))
+
+
 print()
 if echecs:
     print(f"{len(echecs)} test(s) en échec :")

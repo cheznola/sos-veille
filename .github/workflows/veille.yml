@@ -31,20 +31,68 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
+      - name: Vérifier le parsing avant tout appel payant
+        run: python scripts/test_parsing.py
+
       - name: Lancer le run de veille
+        id: run
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/run.py
 
-      - name: Commit et push
+      # Deux commits quand l'agent a modifié ses propres règles, un seul sinon.
+      # Le rapport d'abord : c'est la production. L'évolution ensuite : c'est un
+      # acte distinct, qui doit rester lisible seul dans l'historique.
+      - name: Commit du rapport
         run: |
           set -euo pipefail
           git config user.name "agent-veille"
           git config user.email "actions@github.com"
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "Aucun fichier modifié — rien à committer."
+          git add rapports etat
+          if git diff --cached --quiet; then
+            echo "Aucun rapport modifié, rien à committer."
+          else
+            git commit -m "veille: rapport du $(date -u +%Y-%m-%d)"
+          fi
+
+      - name: Commit séparé des évolutions
+        run: |
+          set -euo pipefail
+          git add moteur.md domaines evolutions
+          if git diff --cached --quiet; then
+            echo "L'agent n'a pas modifié ses règles ce run."
+          else
+            git commit -m "evolution: l'agent modifie ses propres règles"
+            echo "L'agent a modifié ses propres règles, commit séparé créé."
+          fi
+
+      - name: Push
+        run: |
+          set -euo pipefail
+          if [ -z "$(git log origin/${GITHUB_REF_NAME}..HEAD --oneline)" ]; then
+            echo "Rien à pousser."
             exit 0
           fi
-          git add rapports etat
-          git commit -m "veille: rapport du $(date -u +%Y-%m-%d)"
-          git push
+          for essai in 1 2 3 4; do
+            if git push origin HEAD:"${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push en échec, nouvelle tentative dans $((2 ** essai)) s."
+            sleep $((2 ** essai))
+          done
+          echo "Push impossible après 4 tentatives."
+          exit 1
+
+      # Le run a échoué : rien n'est commité, rien n'est poussé. Le dépôt reste
+      # exactement dans l'état où il était avant le run.
+      - name: Rendre l'échec lisible
+        if: failure()
+        run: |
+          echo "::error title=Run de veille en échec::Aucun fichier n'a été commité."
+          echo "Causes possibles, dans l'ordre de fréquence :"
+          echo "  - le modèle n'a pas respecté le format des blocs de sortie ;"
+          echo "  - une évolution proposée visait un chemin interdit ;"
+          echo "  - constitution.md ou profil.md a été modifié pendant le run ;"
+          echo "  - la clé ANTHROPIC_API_KEY est absente ou invalide."
+          echo "Le détail exact figure dans le journal de l'étape « Lancer le run de veille »."
+          git status --short || true

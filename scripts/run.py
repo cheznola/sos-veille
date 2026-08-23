@@ -32,6 +32,7 @@ SUJETS_SUIVIS = ETAT / "sujets-suivis.md"
 PERFORMANCE = ETAT / "performance.md"
 BILANS = ETAT / "bilans"
 RAPPORTS = RACINE / "rapports"
+EVOLUTIONS = RACINE / "evolutions"
 
 # Fichiers que l'agent n'a pas le droit de toucher. Leur empreinte est relevée
 # avant l'appel au modèle et revérifiée après toutes les écritures.
@@ -62,12 +63,25 @@ MARQUEURS_OBLIGATOIRES = (
     "===CORRECTIONS===",
     "===BILAN===",
 )
-MARQUEURS_OPTIONNELS: tuple[str, ...] = ()
+MARQUEURS_OPTIONNELS: tuple[str, ...] = ("===EVOLUTIONS===",)
 MARQUEURS = MARQUEURS_OBLIGATOIRES + MARQUEURS_OPTIONNELS
 MARQUEURS_OPTIONNELS_NOMS = tuple(m.strip("=") for m in MARQUEURS_OPTIONNELS)
 
 APPRECIATIONS = ("riche", "moyen", "vide")
 NB_DOMAINES = 7
+
+# Les deux seuls fichiers qu'une évolution peut viser. Tout autre chemin est
+# rejeté et fait échouer le run : règle 7 de la constitution.
+FICHIERS_EVOLUABLES = (MOTEUR, DOMAINE)
+
+TYPES_EVOLUTION = (
+    "ordre des domaines",
+    "pondération",
+    "ajout de source",
+    "retrait de source",
+    "ajustement du bruit",
+    "critère d'arbitrage",
+)
 
 MOTIF_DOMAINE_BILAN = re.compile(
     r"\[\[DOMAINE:\s*(?P<intitule>[^\]\n]+?)\s*\]\]\s*\n"
@@ -84,6 +98,17 @@ CLES_BILAN = {
     "sources": r"SOURCES",
     "appreciation": r"APPR[EÉ]CIATION",
 }
+
+MOTIF_EVOLUTION = re.compile(
+    r"\[\[EVOLUTION:\s*(?P<cible>[^\]\n]+?)\s*\]\]\s*\n"
+    r"(?P<corps>.*?)"
+    r"\n?\[\[/EVOLUTION\]\]",
+    re.DOTALL,
+)
+
+MOTIF_CHAMP_EVOLUTION = (
+    r"^\s*{cle}\s*:\s*\n<<<\n(?P<valeur>.*?)\n?>>>\s*$"
+)
 
 MOTIF_CORRECTION = re.compile(
     r"\[\[CORRECTION:\s*(?P<cible>[^\]\n]+?)\s*\]\]\s*\n"
@@ -215,11 +240,15 @@ def construire_prompt(aujourdhui: str) -> str:
         )
 
     obligatoires = "\n".join(MARQUEURS_OBLIGATOIRES)
+    optionnels = "\n".join(MARQUEURS_OPTIONNELS)
     morceaux.append(
         "\n\n########## CE QUE TU FAIS MAINTENANT ##########\n\n"
         "Cherche là où le signal est le plus fort, sélectionne, puis réponds en blocs "
         "délimités exactement comme le prescrit la méthode.\n\n"
         f"Blocs obligatoires, dans cet ordre :\n{obligatoires}\n\n"
+        f"Blocs optionnels, dans cet ordre, après les précédents :\n{optionnels}\n"
+        "Un bloc optionnel dont tu n'as rien à dire est omis entièrement. Ne le "
+        "produis jamais vide, et ne le remplis jamais pour faire nombre.\n\n"
         "Rien avant le premier délimiteur, rien après le dernier bloc."
     )
     return "".join(morceaux)
@@ -732,6 +761,212 @@ def rendre_performance(archives: list[tuple[str, list[dict]]]) -> str:
     return "\n".join(lignes).rstrip() + "\n"
 
 
+# ----------------------------------------------------------------- évolutions
+
+
+def _champ_evolution(corps: str, cle: str) -> str | None:
+    trouve = re.search(
+        MOTIF_CHAMP_EVOLUTION.format(cle=cle),
+        corps,
+        re.MULTILINE | re.DOTALL,
+    )
+    return trouve.group("valeur") if trouve else None
+
+
+def analyser_evolutions(bloc: str) -> list[dict]:
+    """Valide les évolutions proposées, sans rien écrire.
+
+    Aucune écriture partielle possible : si une seule évolution est invalide,
+    la fonction lève et le run s'arrête avant la première modification.
+    """
+    if bloc.strip().upper() in ("AUCUNE", "AUCUN"):
+        return []
+
+    trouvees = list(MOTIF_EVOLUTION.finditer(bloc))
+    if not trouvees:
+        raise ErreurVeille(
+            "Le bloc EVOLUTIONS n'est ni AUCUNE ni une suite de balises "
+            "[[EVOLUTION: …]] … [[/EVOLUTION]]. Aucun fichier n'a été modifié.\n"
+            f"Contenu reçu :\n{bloc[:500]}"
+        )
+
+    autorises = {chemin.resolve(): chemin for chemin in FICHIERS_EVOLUABLES}
+    evolutions: list[dict] = []
+
+    for rang, trouvee in enumerate(trouvees, start=1):
+        cible = trouvee.group("cible").strip()
+        corps = trouvee.group("corps")
+
+        # 1. Le chemin visé. Seuls moteur.md et le fichier de domaine passent.
+        chemin = (RACINE / cible).resolve()
+        if chemin not in autorises:
+            permis = ", ".join(
+                str(c.relative_to(RACINE)) for c in FICHIERS_EVOLUABLES
+            )
+            raise ErreurVeille(
+                f"Évolution {rang} : chemin interdit « {cible} ».\n"
+                f"Seuls ces fichiers sont modifiables par l'agent : {permis}.\n"
+                "constitution.md, profil.md, scripts/ et .github/ sont hors de "
+                "portée (règle 7 de la constitution).\n"
+                "Aucune évolution n'a été appliquée, aucun fichier n'a été modifié."
+            )
+
+        # 2. Les quatre champs attendus.
+        manquants = [
+            cle
+            for cle in ("ACTUEL", "NOUVEAU", "JUSTIFICATION")
+            if _champ_evolution(corps, cle) is None
+        ]
+        type_trouve = re.search(r"^\s*TYPE\s*:\s*(.+?)\s*$", corps, re.MULTILINE)
+        if type_trouve is None:
+            manquants.append("TYPE")
+        if manquants:
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : champs manquants "
+                f"{', '.join(manquants)}. Format attendu : TYPE sur une ligne, "
+                "puis ACTUEL, NOUVEAU et JUSTIFICATION, chacun suivi de sa "
+                "valeur encadrée par <<< et >>>.\n"
+                "Aucune évolution n'a été appliquée."
+            )
+
+        type_evolution = type_trouve.group(1).strip().lower().rstrip(".")
+        if not any(t in type_evolution for t in TYPES_EVOLUTION):
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : type « {type_evolution} » "
+                f"inconnu. Types admis : {', '.join(TYPES_EVOLUTION)}.\n"
+                "Aucune évolution n'a été appliquée."
+            )
+
+        actuel = _champ_evolution(corps, "ACTUEL")
+        nouveau = _champ_evolution(corps, "NOUVEAU")
+        justification = _champ_evolution(corps, "JUSTIFICATION").strip()
+
+        if not actuel.strip():
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : ACTUEL est vide. La règle "
+                "actuelle doit être citée mot pour mot, sans quoi le "
+                "remplacement est ambigu. Aucune évolution n'a été appliquée."
+            )
+        if not justification:
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : JUSTIFICATION est vide. "
+                "Une évolution sans justification chiffrée est rejetée "
+                "(règle 5 de la constitution). Aucune évolution n'a été appliquée."
+            )
+        if actuel == nouveau:
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : ACTUEL et NOUVEAU sont "
+                "identiques. Aucune évolution n'a été appliquée."
+            )
+
+        # 3. La règle citée doit exister, une seule fois, dans le fichier visé.
+        contenu = chemin.read_text(encoding="utf-8")
+        occurrences = contenu.count(actuel)
+        if occurrences == 0:
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : la règle citée dans ACTUEL "
+                "est introuvable dans le fichier. Elle doit être reprise mot "
+                "pour mot, ponctuation et retours à la ligne compris.\n"
+                f"Cherché :\n{actuel[:300]}\n"
+                "Aucune évolution n'a été appliquée."
+            )
+        if occurrences > 1:
+            raise ErreurVeille(
+                f"Évolution {rang} visant {cible} : la règle citée apparaît "
+                f"{occurrences} fois dans le fichier. Remplacement ambigu, "
+                "cite un passage plus large.\n"
+                "Aucune évolution n'a été appliquée."
+            )
+
+        evolutions.append(
+            {
+                "rang": rang,
+                "cible": str(chemin.relative_to(RACINE)),
+                "chemin": chemin,
+                "type": type_evolution,
+                "actuel": actuel,
+                "nouveau": nouveau,
+                "justification": justification,
+            }
+        )
+
+    return evolutions
+
+
+def appliquer_evolutions(evolutions: list[dict], date_du_jour: str) -> list[str]:
+    """Applique les évolutions déjà validées et les archive. Rend les archives.
+
+    Appelée seulement après analyser_evolutions() et après le passage du
+    garde-fou : à ce stade, chaque évolution est certaine d'être applicable.
+    """
+    if not evolutions:
+        return []
+
+    EVOLUTIONS.mkdir(parents=True, exist_ok=True)
+    archives: list[str] = []
+
+    for numero, evolution in enumerate(evolutions, start=1):
+        chemin = evolution["chemin"]
+        contenu = chemin.read_text(encoding="utf-8")
+        if contenu.count(evolution["actuel"]) != 1:
+            # Deux évolutions peuvent se chevaucher : la seconde ne trouve plus
+            # son texte. On refuse plutôt que d'écrire à l'aveugle.
+            raise ErreurVeille(
+                f"Évolution {evolution['rang']} visant {evolution['cible']} : "
+                "la règle citée n'est plus trouvable au moment d'appliquer, "
+                "probablement parce qu'une autre évolution du même run l'a "
+                "déjà modifiée. Aucune évolution supplémentaire n'est appliquée."
+            )
+        chemin.write_text(
+            contenu.replace(evolution["actuel"], evolution["nouveau"], 1),
+            encoding="utf-8",
+        )
+
+        nom = f"{date_du_jour}-{numero:02d}.md"
+        (EVOLUTIONS / nom).write_text(
+            rendre_evolution(evolution, date_du_jour, numero), encoding="utf-8"
+        )
+        archives.append(f"evolutions/{nom}")
+
+    return archives
+
+
+def rendre_evolution(evolution: dict, date_du_jour: str, numero: int) -> str:
+    """L'archive evolutions/AAAA-MM-JJ-NN.md : avant, après, justification, date."""
+    nouveau = evolution["nouveau"].strip() or "(règle supprimée)"
+    return (
+        f"# Évolution du {date_du_jour}, n° {numero:02d}\n"
+        "\n"
+        "<!-- évolution décidée par l'agent, appliquée automatiquement -->\n"
+        f"- **Date** : {date_du_jour}\n"
+        f"- **Fichier modifié** : `{evolution['cible']}`\n"
+        f"- **Type** : {evolution['type']}\n"
+        "\n"
+        "## Avant\n"
+        "\n"
+        "```\n"
+        f"{evolution['actuel'].strip()}\n"
+        "```\n"
+        "\n"
+        "## Après\n"
+        "\n"
+        "```\n"
+        f"{nouveau}\n"
+        "```\n"
+        "\n"
+        "## Justification de l'agent\n"
+        "\n"
+        f"{evolution['justification']}\n"
+        "\n"
+        "---\n"
+        "\n"
+        "*Cette modification a été décidée par l'agent lui-même, à partir des "
+        "chiffres de `etat/performance.md`. Elle est datée, tracée et "
+        "réversible : l'état antérieur figure ci-dessus et dans l'historique "
+        "Git. La constitution et le profil restent hors de sa portée.*\n"
+    )
+
+
 # --------------------------------------------------------------------------- écriture
 
 
@@ -798,6 +1033,16 @@ def main() -> int:
     fiches = analyser_bilan(blocs["BILAN"])
     print(f"Bilan analysé : {len(fiches)} domaines.", file=sys.stderr)
 
+    evolutions = analyser_evolutions(blocs.get("EVOLUTIONS", "AUCUNE"))
+    if evolutions:
+        print(
+            f"{len(evolutions)} évolution(s) proposée(s), toutes valides : "
+            + ", ".join(f"{e['cible']} ({e['type']})" for e in evolutions),
+            file=sys.stderr,
+        )
+    else:
+        print("Aucune évolution proposée ce run.", file=sys.stderr)
+
     # À partir d'ici, tout est validé : on écrit.
     duree = time.monotonic() - depart
     rapport_du_jour.write_text(
@@ -826,6 +1071,14 @@ def main() -> int:
             print(f"Corrigé : {nom}", file=sys.stderr)
         else:
             print(f"Correction déjà présente, ignorée : {nom}", file=sys.stderr)
+
+    archives = appliquer_evolutions(evolutions, date_du_jour)
+    for evolution, archive in zip(evolutions, archives):
+        print(
+            f"Règle modifiée par l'agent : {evolution['cible']} "
+            f"({evolution['type']}), archivée dans {archive}",
+            file=sys.stderr,
+        )
 
     verifier_empreintes(scelles, "après application de toutes les écritures")
     print("Fichiers scellés intacts.", file=sys.stderr)
