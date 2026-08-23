@@ -301,6 +301,53 @@
   .reserve .t{font-family:var(--sans); font-weight:600; font-size:1.1rem; color:var(--ink);
               display:block; margin-bottom:10px}
 
+  /* ============ evolutions, ce que l'agent change chez lui ============ */
+  .cadres-evo{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line)}
+  .cadre-evo{padding:34px 36px}
+  .cadre-evo:first-child{border-right:1px solid var(--line)}
+  .cadre-evo .mono{display:block; margin-bottom:22px; color:var(--teal)}
+  .cadre-evo.interdit .mono{color:var(--red)}
+  .cadre-evo ul{list-style:none; margin:0; padding:0; font-size:1rem; line-height:1.6}
+  .cadre-evo li{padding:13px 0 13px 26px; position:relative; color:var(--ink-soft);
+                border-top:1px solid var(--line-soft)}
+  .cadre-evo li:first-child{border-top:0; padding-top:0}
+  .cadre-evo li::before{content:"\203A"; position:absolute; left:2px; color:var(--teal)}
+  .cadre-evo.interdit li::before{content:"\00D7"; color:var(--red)}
+  .note-evo{margin:30px 0 0; font-size:1rem; color:var(--ink-soft); max-width:72ch}
+  .note-evo b{font-weight:400; color:var(--ink)}
+
+  .verdict{margin-top:34px; border:1px solid var(--line); background:var(--bg-2);
+           padding:20px 26px; display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px}
+  .verdict-t{flex:none}
+  .verdict-v{font-family:var(--mono); font-size:.66rem; letter-spacing:.18em;
+             text-transform:uppercase; padding:5px 12px; border:1px solid var(--line)}
+  .verdict-v.ok{color:var(--teal); border-color:rgba(95,176,162,.45); background:var(--teal-wash)}
+  .verdict-v.ko{color:var(--red); border-color:rgba(200,94,68,.45)}
+  .verdict-d{color:var(--ink-soft); font-size:.95rem}
+
+  .evo-liste{margin-top:34px; border:1px solid var(--line)}
+  .evo{border-bottom:1px solid var(--line)}
+  .evo:last-child{border-bottom:0}
+  .evo > summary{list-style:none; cursor:pointer; padding:26px 46px 26px 30px;
+    position:relative; font-family:var(--sans); font-weight:600; font-size:1.1rem;
+    line-height:1.4; letter-spacing:-.012em; color:var(--ink); text-wrap:balance}
+  .evo > summary::-webkit-details-marker{display:none}
+  .evo > summary::after{content:"+"; position:absolute; right:26px; top:50%;
+    transform:translateY(-50%); font-family:var(--mono); font-size:1.15rem;
+    color:var(--teal); line-height:1}
+  .evo[open] > summary::after{content:"\2013"}
+  .evo > summary:hover{color:var(--gold)}
+  .evo-meta{display:block; margin-top:11px; font-family:var(--mono); font-weight:400;
+    font-size:.63rem; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-soft)}
+  .evo-corps{padding:2px 30px 30px}
+  .evo-corps h3.mono{margin:26px 0 12px; font-size:.63rem; letter-spacing:.18em}
+  .evo-corps > h3.mono:first-child{margin-top:6px}
+  .evo-corps .md pre{white-space:pre-wrap; word-break:break-word}
+  .evo-vide{padding:56px 30px; text-align:center; color:var(--ink-soft)}
+  .evo-vide .t{font-family:var(--sans); font-weight:600; font-size:1.14rem;
+               color:var(--ink); display:block; margin-bottom:14px; text-wrap:balance}
+  .evo-vide p{max-width:58ch; margin:0 auto}
+
   /* ============ pied ============ */
   footer.wrap{padding-top:132px; padding-bottom:104px; color:var(--ink-soft);
               font-size:.97rem}
@@ -336,6 +383,14 @@
     .remarque{padding:22px}
     details.sujet > summary{padding:22px 34px 22px 0; font-size:1.05rem}
     .sujet-corps{padding-right:0}
+    .cadres-evo{grid-template-columns:1fr}
+    .cadre-evo{padding:26px 22px}
+    .cadre-evo:first-child{border-right:0; border-bottom:1px solid var(--line)}
+    .verdict{padding:18px 20px; gap:10px 14px}
+    .evo > summary{padding:22px 40px 22px 22px; font-size:1.03rem}
+    .evo > summary::after{right:20px}
+    .evo-corps{padding:2px 22px 26px}
+    .evo-vide{padding:40px 22px}
     .dom{grid-template-columns:1fr}
     .dom-t{border-right:0; border-bottom:1px solid var(--line); padding:24px 22px}
     .dom-s{padding:22px}
@@ -369,6 +424,7 @@
       <a href="#github">GitHub</a>
       <a href="#travail"><span class="art">Au </span>Travail</a>
       <a href="#rapport"><span class="art">Le </span>Rapport</a>
+      <a href="#evolutions"><span class="art">Ses </span>Changements</a>
       <a href="#sources"><span class="art">Les </span>Sources</a>
     </nav>
   </div>
@@ -576,9 +632,55 @@
   <p style="margin-top:28px"><a href="https://github.com/cheznola/sos-veille/tree/main/rapports">Voir tous les rapports &rsaquo;</a></p>
 </section>
 
+<section class="wrap" id="evolutions">
+  <div class="titre-bloc">
+    <span class="mono">07 &middot; l'auto-modification</span>
+    <h2>Ce que l'agent a d&eacute;cid&eacute; de changer chez lui</h2>
+    <p class="chapo">Chaque semaine, l'agent mesure ce que ses propres r&egrave;gles lui ont rapport&eacute;. Quand les chiffres lui donnent tort, il r&eacute;&eacute;crit la r&egrave;gle. Cette section charge ces d&eacute;cisions en direct depuis le repo, la plus r&eacute;cente en premier.</p>
+  </div>
+
+  <div class="cadres-evo">
+    <div class="cadre-evo">
+      <span class="mono">ce qu'il peut changer</span>
+      <ul>
+        <li>L'ordre dans lequel il balaie les sept domaines</li>
+        <li>L'ajout ou le retrait d'une source de r&eacute;f&eacute;rence</li>
+        <li>La liste de ce qu'il consid&egrave;re comme du bruit</li>
+        <li>Ses crit&egrave;res d'arbitrage entre deux sujets</li>
+      </ul>
+    </div>
+    <div class="cadre-evo interdit">
+      <span class="mono">ce qu'il ne peut pas changer</span>
+      <ul>
+        <li>Sa constitution : les sept r&egrave;gles qui le tiennent</li>
+        <li>Le profil de la personne qu'il sert</li>
+        <li>Son propre code, et son d&eacute;clencheur hebdomadaire</li>
+        <li>Le format dans lequel il doit rendre son travail</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="note-evo">Une modification n'est accept&eacute;e que si elle est <b>justifi&eacute;e par des chiffres</b> tir&eacute;s de ses propres relev&eacute;s, sur trois semaines au moins. Elle est <b>dat&eacute;e</b>, <b>archiv&eacute;e</b> avec son avant et son apr&egrave;s, et <b>r&eacute;versible</b> &agrave; tout moment. Le plus souvent, il ne change rien : c'est le r&eacute;sultat attendu.</p>
+
+  <div class="verdict" id="verdict" hidden>
+    <span class="verdict-t mono">dernier verdict du garde-fou</span>
+    <span class="verdict-v" id="verdict-v"></span>
+    <span class="verdict-d" id="verdict-d"></span>
+  </div>
+
+  <div id="evo-etat" class="etat">
+    <div class="tourne"></div>
+    <span class="mono">lecture du dossier des &eacute;volutions</span>
+  </div>
+
+  <div class="evo-liste" id="evo-liste" hidden></div>
+
+  <p style="margin-top:28px"><a href="https://github.com/cheznola/sos-veille/tree/main/evolutions">Voir toutes les &eacute;volutions sur GitHub &rsaquo;</a></p>
+</section>
+
 <section class="wrap" id="sources">
   <div class="titre-bloc">
-    <span class="mono">07 · l'annuaire</span>
+    <span class="mono">08 · l'annuaire</span>
     <h2>Les sources que consulte l'agent</h2>
     <p class="chapo">Il ne cherche pas au hasard. Chaque domaine porte sa liste de sources de référence, écrite à la main dans le repo. En doré, les sources primaires : textes officiels et organismes qui produisent la donnée.</p>
   </div>
@@ -1053,6 +1155,207 @@
         .then(function (md) { rendre(md, dernier.name); });
     })
     .catch(function (e) { echouer(e && e.message ? e.message : "erreur réseau"); });
+
+  /* ============================================================
+     4. Les evolutions, et le dernier verdict du garde-fou
+     Meme technique que la section rapport : API GitHub, marked.js,
+     assainissement identique, trois etats chargement / succes / erreur.
+     ============================================================ */
+  var DOSSIER_EVO = "evolutions";
+  var DOSSIER_AUDITS = "etat/audits";
+  var LIEN_EVO = "https://github.com/" + REPO + "/tree/main/" + DOSSIER_EVO;
+
+  var elEvoEtat = document.getElementById("evo-etat");
+  var elEvoListe = document.getElementById("evo-liste");
+  var elVerdict = document.getElementById("verdict");
+  var elVerdictV = document.getElementById("verdict-v");
+  var elVerdictD = document.getElementById("verdict-d");
+
+  // evolutions/AAAA-MM-JJ-NN.md
+  function partsEvo(nom) { return /^(\d{4})-(\d{2})-(\d{2})-(\d{2})\.md$/.exec(nom); }
+
+  function dateEvoFr(nom) {
+    var m = partsEvo(nom);
+    if (!m) { return nom; }
+    return parseInt(m[3], 10) + " " + MOIS[parseInt(m[2], 10) - 1] + " " + m[1];
+  }
+
+  // Le fichier d'evolution est ecrit par le script, mais son contenu vient du
+  // modele : on le traite comme du texte non fiable, exactement comme le rapport.
+  function champEvo(markdown, label) {
+    var re = new RegExp("\\*\\*" + label + "\\*\\*\\s*[:\\-\\u2013\\u2014]?\\s*`?([^\\n`]+)`?");
+    var m = re.exec(markdown);
+    return m ? m[1].trim() : "";
+  }
+
+  function sectionEvo(markdown, titre) {
+    var re = new RegExp("^##[ \\t]+" + titre + "[ \\t]*$", "m");
+    var m = re.exec(markdown);
+    if (!m) { return ""; }
+    var reste = markdown.slice(m.index + m[0].length);
+    var fin = /^(##[ \t]|---[ \t]*$)/m.exec(reste);
+    return (fin ? reste.slice(0, fin.index) : reste).trim();
+  }
+
+  function afficherEtatEvo(html, classe) {
+    elEvoEtat.className = "etat" + (classe ? " " + classe : "");
+    elEvoEtat.innerHTML = html;
+    elEvoEtat.hidden = false;
+    elEvoListe.hidden = true;
+  }
+
+  function evoEnAttente() {
+    elEvoEtat.hidden = true;
+    elEvoListe.hidden = false;
+    elEvoListe.innerHTML = "";
+    var vide = document.createElement("div");
+    vide.className = "evo-vide";
+    var t = document.createElement("span");
+    t.className = "t";
+    t.textContent = "L'agent n'a pas encore jug\u00e9 n\u00e9cessaire de modifier ses r\u00e8gles.";
+    vide.appendChild(t);
+    var p = document.createElement("p");
+    p.textContent = "Il lui faut au moins trois semaines de relev\u00e9s pour qu'un motif " +
+      "soit autre chose qu'un hasard, et des chiffres qui contredisent la r\u00e8gle en " +
+      "place. Tant qu'il ne les a pas, il ne touche \u00e0 rien. C'est le comportement " +
+      "attendu, pas une panne.";
+    vide.appendChild(p);
+    elEvoListe.appendChild(vide);
+  }
+
+  function evoEchouer(raison) {
+    afficherEtatEvo(
+      '<span class="marque-err">\u00e9volutions indisponibles</span>' +
+      "<p>Impossible de joindre le repo \u00e0 l'instant (" + echapper(raison) + ").</p>" +
+      '<p style="margin-bottom:0"><a href="' + LIEN_EVO + '">Lire les \u00e9volutions directement sur GitHub &rsaquo;</a></p>',
+      "err"
+    );
+  }
+
+  function rendreEvolutions(fichiers) {
+    elEvoListe.innerHTML = "";
+    fichiers.forEach(function (item, rang) {
+      var det = document.createElement("details");
+      det.className = "evo";
+      if (rang === 0) { det.open = true; }
+
+      var sum = document.createElement("summary");
+      var type = champEvo(item.md, "Type");
+      var cible = champEvo(item.md, "Fichier modifi\u00e9");
+      sum.appendChild(document.createTextNode(
+        type ? type.charAt(0).toUpperCase() + type.slice(1) : "Modification de ses r\u00e8gles"));
+
+      var meta = document.createElement("span");
+      meta.className = "evo-meta";
+      var bouts = [dateEvoFr(item.nom)];
+      if (cible) { bouts.push(cible); }
+      meta.textContent = bouts.join("  \u00b7  ");
+      sum.appendChild(meta);
+      det.appendChild(sum);
+
+      var corps = document.createElement("div");
+      corps.className = "evo-corps";
+
+      var avant = sectionEvo(item.md, "Avant");
+      var apres = sectionEvo(item.md, "Apr\u00e8s");
+      var pourquoi = sectionEvo(item.md, "Justification de l'agent");
+
+      if (avant) {
+        var h1 = document.createElement("h3");
+        h1.className = "mono"; h1.style.color = "var(--red)";
+        h1.textContent = "la r\u00e8gle avant";
+        corps.appendChild(h1);
+        corps.appendChild(versHtml(avant));
+      }
+      if (apres) {
+        var h2 = document.createElement("h3");
+        h2.className = "mono"; h2.style.color = "var(--teal)";
+        h2.textContent = "la r\u00e8gle apr\u00e8s";
+        corps.appendChild(h2);
+        corps.appendChild(versHtml(apres));
+      }
+      if (pourquoi) {
+        var h3 = document.createElement("h3");
+        h3.className = "mono"; h3.style.color = "var(--gold)";
+        h3.textContent = "sa justification";
+        corps.appendChild(h3);
+        corps.appendChild(versHtml(pourquoi));
+      }
+      if (!avant && !apres && !pourquoi) {
+        corps.appendChild(versHtml(item.md));
+      }
+
+      det.appendChild(corps);
+      elEvoListe.appendChild(det);
+    });
+
+    elEvoEtat.hidden = true;
+    elEvoListe.hidden = false;
+  }
+
+  function listerDossier(dossier) {
+    return fetch("https://api.github.com/repos/" + REPO + "/contents/" + dossier,
+                 { headers: { "Accept": "application/vnd.github+json" } })
+      .then(function (r) {
+        // Un dossier absent du repo est un etat normal, pas une erreur.
+        if (r.status === 404) { return []; }
+        if (!r.ok) { throw new Error("HTTP " + r.status); }
+        return r.json();
+      })
+      .then(function (l) { return Array.isArray(l) ? l : []; });
+  }
+
+  listerDossier(DOSSIER_EVO)
+    .then(function (fichiers) {
+      var evos = fichiers.filter(function (f) {
+        return f.type === "file" && partsEvo(f.name);
+      }).sort(function (a, b) {
+        // Antechronologique : la decision la plus recente en premier.
+        return a.name < b.name ? 1 : a.name > b.name ? -1 : 0;
+      });
+
+      if (evos.length === 0) { evoEnAttente(); return null; }
+
+      return Promise.all(evos.map(function (f) {
+        return fetch(f.download_url)
+          .then(function (r) {
+            if (!r.ok) { throw new Error("HTTP " + r.status); }
+            return r.text();
+          })
+          .then(function (md) { return { nom: f.name, md: md }; });
+      })).then(rendreEvolutions);
+    })
+    .catch(function (e) { evoEchouer(e && e.message ? e.message : "erreur r\u00e9seau"); });
+
+  // Le dernier verdict du garde-fou, en compact. Son absence n'est pas une
+  // erreur : elle signifie qu'aucun run n'a encore ete audite.
+  listerDossier(DOSSIER_AUDITS)
+    .then(function (fichiers) {
+      var audits = fichiers.filter(function (f) {
+        return f.type === "file" && partsDate(f.name);
+      }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+
+      if (audits.length === 0) { return null; }
+      var dernier = audits[audits.length - 1];
+      return fetch(dernier.download_url)
+        .then(function (r) {
+          if (!r.ok) { throw new Error("HTTP " + r.status); }
+          return r.text();
+        })
+        .then(function (md) {
+          var valide = /\*\*Verdict\s*:\s*VALID/i.test(md);
+          elVerdictV.textContent = valide ? "valid\u00e9" : "bloqu\u00e9";
+          elVerdictV.className = "verdict-v " + (valide ? "ok" : "ko");
+          elVerdictD.textContent = valide
+            ? "Run du " + enFrancais(dernier.name) + ", relu par un second agent en " +
+              "lecture seule. Aucune affirmation non sourc\u00e9e, aucune \u00e9volution " +
+              "justifi\u00e9e par une impression."
+            : "Run du " + enFrancais(dernier.name) + ". Le relecteur a bloqu\u00e9 tout " +
+              "ou partie de la production. Le d\u00e9tail figure dans le journal d'audit.";
+          elVerdict.hidden = false;
+        });
+    })
+    .catch(function () { /* le verdict est un bonus : son echec ne casse rien */ });
 })();
 </script>
 </body>
