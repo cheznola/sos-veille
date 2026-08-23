@@ -119,7 +119,7 @@ def appeler_modele(prompt: str) -> tuple[str, int]:
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         raise ErreurVeille(
             "ANTHROPIC_API_KEY absent de l'environnement.\n"
-            "En local : export ANTHROPIC_API_KEY=... — "
+            "En local : export ANTHROPIC_API_KEY=... ; "
             "sur GitHub Actions : secret du dépôt du même nom."
         )
 
@@ -295,7 +295,7 @@ def analyser_corrections(bloc: str, rapport_du_jour: Path) -> list[tuple[Path, s
 
 def en_tete(date_du_jour: str, heure_utc: str, duree: float, recherches: int) -> str:
     return (
-        f"# Veille — {date_du_jour}\n\n"
+        f"# Veille du {date_du_jour}\n\n"
         f"<!-- run automatique -->\n"
         f"*Run du {date_du_jour} à {heure_utc} UTC · durée {duree:.0f} s · "
         f"{recherches} recherche{'s' if recherches > 1 else ''} web · modèle {MODELE}*\n\n"

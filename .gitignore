@@ -1,6 +1,21 @@
+# Environnements et secrets : rien de tout cela ne doit entrer dans le repo.
+.env
+.env.*
+!.env.example
+*.env
+secrets.*
+*secret*.json
+*credentials*.json
+*.pem
+*.key
+.anthropic
+.netrc
+
+# Python
 __pycache__/
 *.pyc
-.env
 .venv/
 venv/
+
+# Système
 .DS_Store

@@ -73,6 +73,12 @@ Il faut un compte GitHub et une clé d'API Anthropic. Comptez dix minutes.
 clé, qui commence par `sk-ant-`. Elle se crée sur
 [console.anthropic.com](https://console.anthropic.com) → *API Keys*.
 
+> **Ne commitez jamais votre clé**, nulle part : ni dans le code, ni dans un fichier
+> de configuration, ni dans un message de commit. Elle passe toujours par les secrets
+> du repo. Ce repo est public, et un secret commité reste dans l'historique même
+> après suppression. En cas de doute, révoquez-la : la marche à suivre est dans
+> [SECURITY.md](SECURITY.md).
+
 **3. Autorisez les workflows.** Onglet *Actions* → *I understand my workflows, go ahead
 and enable them*. Sur un dépôt forké, GitHub les désactive par défaut.
 
