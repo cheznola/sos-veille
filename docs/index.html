@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="dark">
+<html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,22 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
 
-<script>
-  // Applique le thème avant le premier rendu, pour éviter tout clignotement.
-  (function () {
-    try {
-      var choix = localStorage.getItem("sos-theme");
-      if (choix === "light" || choix === "dark") {
-        document.documentElement.setAttribute("data-theme", choix);
-      } else {
-        document.documentElement.removeAttribute("data-theme");
-      }
-    } catch (e) { /* localStorage indisponible : on garde le sombre par défaut */ }
-  })();
-</script>
-
 <style>
-  /* ============ jetons de thème ============ */
   :root{
     --bg:#0B181C; --bg-2:#0F2126; --bg-3:#081216;
     --line:#22383E; --line-soft:#182B31;
@@ -52,30 +37,7 @@
     --serif:"Newsreader",Georgia,serif;
     --sans:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
     --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
-    --mesure:66ch;
-  }
-  .clair{
-    --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
-    --line:#DAD1BE; --line-soft:#E6DECD;
-    --ink:#15272C; --ink-soft:#5D6E72;
-    --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
-    --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
-  }
-  @media (prefers-color-scheme:light){
-    :root:not([data-theme="dark"]){
-      --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
-      --line:#DAD1BE; --line-soft:#E6DECD;
-      --ink:#15272C; --ink-soft:#5D6E72;
-      --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
-      --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
-    }
-  }
-  :root[data-theme="light"]{
-    --bg:#F6F2E9; --bg-2:#FFFDF8; --bg-3:#EFE9DC;
-    --line:#DAD1BE; --line-soft:#E6DECD;
-    --ink:#15272C; --ink-soft:#5D6E72;
-    --gold:#8F6112; --teal:#1F6E60; --red:#A8422A;
-    --gold-wash:rgba(143,97,18,.08); --teal-wash:rgba(31,110,96,.06);
+    --barre-h:56px;
   }
 
   /* ============ base ============ */
@@ -87,11 +49,10 @@
     font-size:19px; line-height:1.78; letter-spacing:.004em;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1060px; margin:0 auto; padding:0 32px}
-  .mesure{max-width:var(--mesure)}
+  .wrap{max-width:1060px; margin:0 auto; padding-left:32px; padding-right:32px}
   p{margin:0 0 1.35em}
   a{color:var(--gold); text-decoration:none;
-    border-bottom:1px solid color-mix(in srgb, var(--gold) 35%, transparent)}
+    border-bottom:1px solid rgba(212,160,63,.34)}
   a:hover{border-bottom-color:var(--gold)}
   a:focus-visible,button:focus-visible,summary:focus-visible{
     outline:2px solid var(--teal); outline-offset:3px; border-radius:1px}
@@ -99,30 +60,34 @@
   .mono{font-family:var(--mono); font-weight:500; text-transform:uppercase;
         letter-spacing:.2em; font-size:.68rem; color:var(--ink-soft)}
 
-  section{border-top:1px solid var(--line); padding:104px 0}
-  .titre-bloc{margin-bottom:64px}
+  /* Aucun filet entre les sections : la respiration fait la separation.
+     La regle est plus specifique que .wrap, sinon le padding vertical
+     serait ecrase et les sections se toucheraient. */
+  section.wrap{padding-top:136px; padding-bottom:0; scroll-margin-top:var(--barre-h)}
+  .titre-bloc{margin-bottom:60px}
   h2{font-family:var(--sans); font-weight:800;
      font-size:clamp(1.75rem,4vw,2.6rem); letter-spacing:-.025em;
-     line-height:1.14; margin:.5em 0 .55em; text-wrap:balance}
+     line-height:1.14; margin:.42em 0 .5em; text-wrap:balance}
   .chapo{color:var(--ink-soft); font-size:1.06rem; max-width:56ch; margin:0}
 
-  /* ============ bascule de thème ============ */
-  .barre{position:sticky; top:0; z-index:40; background:color-mix(in srgb, var(--bg) 88%, transparent);
-         backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft)}
-  .barre-in{max-width:1060px; margin:0 auto; padding:13px 32px;
-            display:flex; align-items:center; gap:16px}
-  .marque{font-family:var(--sans); font-weight:800; letter-spacing:-.01em; font-size:1rem}
+  /* ============ barre de navigation ============ */
+  .barre{position:sticky; top:0; z-index:40; background:rgba(11,24,28,.9);
+         backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft)}
+  .barre-in{max-width:1060px; margin:0 auto; padding:0 32px;
+            display:flex; align-items:center; gap:28px; min-height:var(--barre-h)}
+  .marque{font-family:var(--sans); font-weight:800; letter-spacing:-.01em;
+          font-size:.98rem; white-space:nowrap; flex:none}
   .marque .p{color:var(--gold)}
-  .theme-btn{margin-left:auto; display:inline-flex; align-items:center; gap:9px;
-    background:transparent; color:var(--ink-soft); border:1px solid var(--line);
-    padding:7px 14px; cursor:pointer; font-family:var(--mono); font-size:.66rem;
-    text-transform:uppercase; letter-spacing:.16em; transition:color .2s, border-color .2s}
-  .theme-btn:hover{color:var(--ink); border-color:var(--ink-soft)}
-  .theme-btn svg{width:13px; height:13px; flex:none}
+  .nav{display:flex; gap:26px; margin-left:auto; align-items:center}
+  .nav a{font-family:var(--mono); font-size:.64rem; letter-spacing:.16em;
+         text-transform:uppercase; color:var(--ink-soft); border-bottom:0;
+         padding:6px 0; white-space:nowrap; transition:color .18s}
+  .nav a:hover{color:var(--ink)}
+  .nav a.actif{color:var(--gold)}
 
   /* ============ hero ============ */
-  header.hero{padding:120px 0 108px}
-  .eyebrow{display:flex; align-items:center; gap:14px; margin-bottom:46px}
+  header.hero{padding:104px 32px 0; max-width:1060px; margin:0 auto}
+  .eyebrow{display:flex; align-items:center; gap:14px; margin-bottom:44px}
   .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--gold); flex:none}
   h1{font-family:var(--sans); font-weight:800;
      font-size:clamp(2.4rem,7vw,4.5rem); line-height:1.06; letter-spacing:-.03em;
@@ -130,10 +95,9 @@
   h1 .p{color:var(--gold)}
   h1 em{font-style:normal; color:var(--teal)}
   .lede{font-size:clamp(1.12rem,2.2vw,1.4rem); line-height:1.7; max-width:46ch;
-        margin:0 0 2em}
+        margin:0 0 3em}
   .lede b{font-weight:400; color:var(--gold)}
-  .hero-meta{display:flex; flex-wrap:wrap; gap:12px 34px; padding-top:34px;
-             border-top:1px solid var(--line)}
+  .hero-meta{display:flex; flex-wrap:wrap; gap:14px 34px}
 
   /* ============ le mur ============ */
   .mur{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line)}
@@ -150,11 +114,23 @@
   .mur li::before{content:"·"; position:absolute; left:2px; color:var(--line);
                   font-size:1.4em; line-height:1.1}
   .mur .agent li::before{content:"›"; color:var(--teal); font-size:1.1em; line-height:1.5}
-  .cle{margin:64px 0 0; padding:44px 0 0; border-top:1px solid var(--line);
-       font-family:var(--sans); font-weight:600;
+  .cle{margin:76px 0 0; font-family:var(--sans); font-weight:600;
        font-size:clamp(1.3rem,3.1vw,1.95rem); line-height:1.32;
        letter-spacing:-.02em; text-wrap:balance}
   .cle b{font-weight:800; color:var(--gold)}
+
+  /* ============ github et repo ============ */
+  .notions{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line)}
+  .notion{padding:40px}
+  .notion:first-child{border-right:1px solid var(--line)}
+  .notion h3{font-family:var(--sans); font-weight:800; font-size:1.28rem;
+             letter-spacing:-.015em; margin:16px 0 18px}
+  .notion p{font-size:1rem}
+  .notion p:last-child{margin-bottom:0}
+  .notion .ill{font-family:var(--mono); font-size:.73rem; color:var(--ink-soft);
+    background:var(--bg-2); border:1px solid var(--line-soft); padding:16px 18px;
+    margin-top:6px; line-height:2}
+  .notion .ill b{color:var(--gold); font-weight:500}
 
   /* ============ cycle ============ */
   .cadre{border:1px solid var(--line); background:var(--bg-2); padding:26px 14px}
@@ -165,7 +141,7 @@
   .n-num{font-family:var(--mono); font-weight:500; font-size:19px}
   .c-mid{font-family:var(--mono); font-weight:500; font-size:11.5px; letter-spacing:.2em;
          text-transform:uppercase; fill:var(--ink-soft)}
-  .legende{margin-top:26px; display:flex; flex-wrap:wrap; gap:10px 30px; align-items:center}
+  .legende{margin-top:26px; display:flex; flex-wrap:wrap; gap:12px 30px; align-items:center}
   .legende span{display:inline-flex; align-items:center; gap:9px}
   .puce{width:9px; height:9px; border-radius:50%; flex:none}
 
@@ -175,37 +151,24 @@
           border-bottom:1px solid var(--line); background:var(--bg-2)}
   .term-h .titre{font-family:var(--mono); font-size:.7rem; letter-spacing:.16em;
                  text-transform:uppercase; color:var(--ink-soft)}
-  .badge{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono);
+  .badge{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono);
          font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:var(--red);
-         border:1px solid color-mix(in srgb, var(--red) 45%, transparent);
-         padding:3px 9px}
+         border:1px solid rgba(200,94,68,.45); padding:3px 10px; white-space:nowrap}
   .badge i{width:6px; height:6px; border-radius:50%; background:var(--red);
            animation:battement 1.6s ease-in-out infinite}
   @keyframes battement{0%,100%{opacity:1}50%{opacity:.2}}
   .horloge{margin-left:auto; font-family:var(--mono); font-size:.7rem;
            letter-spacing:.1em; color:var(--ink-soft); font-variant-numeric:tabular-nums}
-  .term-b{padding:22px 20px; min-height:250px; font-family:var(--mono);
+  .term-b{padding:22px 20px; min-height:252px; font-family:var(--mono);
           font-size:.79rem; line-height:1.55; display:flex; flex-direction:column; gap:11px}
   .ligne{display:flex; gap:11px; align-items:flex-start; word-break:break-word}
   .ligne .fl{color:var(--teal); flex:none}
-  .ligne .h{color:var(--ink-soft); flex:none; font-variant-numeric:tabular-nums}
+  .ligne .h{color:var(--teal); flex:none; font-variant-numeric:tabular-nums; opacity:.75}
   .ligne .t{color:var(--ink)}
   .ligne .k{color:var(--gold)}
   .ligne.neuve{animation:apparition .5s cubic-bezier(.2,.7,.3,1) both}
   @keyframes apparition{from{opacity:0; transform:translateY(-9px)} to{opacity:1; transform:none}}
-  .note{margin-top:20px; font-size:.92rem; color:var(--ink-soft)}
-
-  /* ============ repo / github ============ */
-  .notions{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line)}
-  .notion{padding:40px}
-  .notion:first-child{border-right:1px solid var(--line)}
-  .notion h3{font-family:var(--sans); font-weight:800; font-size:1.28rem;
-             letter-spacing:-.015em; margin:16px 0 20px}
-  .notion p:last-child{margin-bottom:0}
-  .notion .ill{font-family:var(--mono); font-size:.74rem; color:var(--ink-soft);
-    background:var(--bg-2); border:1px solid var(--line-soft); padding:14px 16px;
-    margin-top:22px; line-height:1.9}
-  .notion .ill b{color:var(--gold); font-weight:500}
+  .note{margin-top:22px; font-size:.94rem; color:var(--ink-soft)}
 
   /* ============ chiffres ============ */
   .chiffres{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line)}
@@ -217,22 +180,34 @@
   .ch.t .v{color:var(--teal)}
   .ch .k{font-size:.97rem; line-height:1.55; color:var(--ink-soft)}
 
-  /* ============ rapport ============ */
-  .rap{border:1px solid var(--line); background:var(--bg-2)}
-  .rap-h{padding:28px 34px; border-bottom:1px solid var(--line)}
-  .rap-h-top{display:flex; flex-wrap:wrap; align-items:center; gap:14px 18px}
-  .direct{display:inline-flex; align-items:center; gap:9px}
-  .direct i{width:7px; height:7px; border-radius:50%; background:var(--teal);
+  /* ============ rapport, la piece vivante ============ */
+  .rap{border:1px solid var(--line); border-top:2px solid var(--gold);
+       background:var(--bg-2); box-shadow:0 0 60px -30px rgba(212,160,63,.5)}
+  .bandeau{padding:30px 34px; border-bottom:1px solid var(--line);
+           background:linear-gradient(180deg, var(--gold-wash), transparent)}
+  .bandeau-haut{display:flex; flex-wrap:wrap; align-items:center; gap:12px}
+  .vivant{display:inline-flex; align-items:center; gap:9px; font-family:var(--mono);
+    font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:var(--gold);
+    border:1px solid rgba(212,160,63,.45); padding:4px 11px; background:var(--gold-wash)}
+  .vivant i{width:6px; height:6px; border-radius:50%; background:var(--gold);
             animation:battement 2.4s ease-in-out infinite; flex:none}
-  .rap-date{font-family:var(--sans); font-weight:800; font-size:1.5rem;
-            letter-spacing:-.02em; margin-left:auto}
-  .resume{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; align-items:center}
-  .pastille{font-family:var(--mono); font-size:.66rem; letter-spacing:.13em;
+  .fraicheur{font-family:var(--mono); font-size:.6rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--teal); border:1px solid rgba(95,176,162,.4);
+    padding:4px 11px; background:var(--teal-wash)}
+  .rap-date{font-family:var(--sans); font-weight:800;
+            font-size:clamp(1.7rem,4vw,2.35rem); letter-spacing:-.028em;
+            line-height:1.1; margin:22px 0 10px; display:block}
+  .rap-sous{color:var(--ink-soft); font-size:1rem; margin:0; max-width:56ch}
+  .resume{display:flex; flex-wrap:wrap; gap:9px; margin-top:24px; align-items:center}
+  .pastille{font-family:var(--mono); font-size:.64rem; letter-spacing:.13em;
     text-transform:uppercase; color:var(--ink-soft);
     border:1px solid var(--line); padding:6px 11px}
-  .pastille.fort{color:var(--gold); border-color:color-mix(in srgb, var(--gold) 42%, transparent);
+  .pastille.fort{color:var(--gold); border-color:rgba(212,160,63,.42);
                  background:var(--gold-wash)}
   .rap-corps{padding:12px 34px 34px}
+  .rap-pied{padding:22px 34px; border-top:1px solid var(--line); background:var(--bg-3);
+            color:var(--ink-soft); font-size:.94rem}
+  .rap-pied p{margin:0}
 
   details.sujet{border-bottom:1px solid var(--line)}
   details.sujet:last-of-type{border-bottom:0}
@@ -243,8 +218,7 @@
   details.sujet > summary::-webkit-details-marker{display:none}
   details.sujet > summary::after{
     content:"+"; position:absolute; right:6px; top:50%; transform:translateY(-50%);
-    font-family:var(--mono); font-size:1.15rem; color:var(--teal); line-height:1;
-    transition:transform .2s}
+    font-family:var(--mono); font-size:1.15rem; color:var(--teal); line-height:1}
   details.sujet[open] > summary::after{content:"–"}
   details.sujet > summary:hover{color:var(--gold)}
   .sujet-meta{display:block; margin-top:11px; font-family:var(--mono); font-weight:400;
@@ -308,16 +282,15 @@
   .dom-s{padding:32px 34px; display:flex; flex-wrap:wrap; gap:9px; align-content:flex-start}
   .src{font-family:var(--mono); font-size:.71rem; letter-spacing:.05em; color:var(--ink-soft);
        border:1px solid var(--line); padding:7px 12px; line-height:1.35}
-  .src.p{color:var(--gold); border-color:color-mix(in srgb, var(--gold) 40%, transparent);
-         background:var(--gold-wash)}
+  .src.p{color:var(--gold); border-color:rgba(212,160,63,.4); background:var(--gold-wash)}
   .reserve{margin-top:34px; border:1px dashed var(--line); padding:34px;
            text-align:center; color:var(--ink-soft)}
   .reserve .t{font-family:var(--sans); font-weight:600; font-size:1.1rem; color:var(--ink);
               display:block; margin-bottom:10px}
 
   /* ============ pied ============ */
-  footer{border-top:1px solid var(--line); padding:72px 0 96px; color:var(--ink-soft);
-         font-size:.97rem}
+  footer.wrap{padding-top:132px; padding-bottom:104px; color:var(--ink-soft);
+              font-size:.97rem}
   .pied{display:flex; flex-wrap:wrap; gap:34px 56px; justify-content:space-between}
   .pied p{margin:0}
   .pied .bloc{max-width:40ch}
@@ -325,34 +298,41 @@
   /* ============ responsive ============ */
   @media (max-width:820px){
     body{font-size:17.5px; line-height:1.72}
-    .wrap{padding:0 20px}
-    .barre-in{padding:11px 20px}
-    header.hero{padding:72px 0 64px}
-    section{padding:66px 0}
-    .titre-bloc{margin-bottom:42px}
+    .wrap{padding-left:20px; padding-right:20px}
+    section.wrap{padding-top:76px}
+    footer.wrap{padding-top:76px; padding-bottom:72px}
+    header.hero{padding:56px 20px 0}
+    .titre-bloc{margin-bottom:40px}
+    .barre-in{padding:0 20px; gap:0; flex-wrap:wrap; min-height:0}
+    .marque{padding:12px 0 4px; font-size:.92rem}
+    .nav{margin-left:0; width:100%; gap:17px; overflow-x:auto; padding:2px 0 11px;
+         scrollbar-width:none; -webkit-overflow-scrolling:touch}
+    .nav a{font-size:.61rem; letter-spacing:.13em}
+    .nav .art{display:none}
+    .nav::-webkit-scrollbar{display:none}
+    :root{--barre-h:92px}
     .mur,.notions{grid-template-columns:1fr}
     .mur > div,.notion{padding:30px 24px}
     .mur > div:first-child,.notion:first-child{border-right:0; border-bottom:1px solid var(--line)}
-    .cle{margin-top:44px; padding-top:32px}
+    .cle{margin-top:52px}
     .chiffres{grid-template-columns:1fr 1fr}
     .ch{padding:28px 22px; border-bottom:1px solid var(--line)}
     .ch:nth-child(2n){border-right:0}
     .ch:nth-last-child(-n+2){border-bottom:0}
-    .rap-h,.rap-corps{padding-left:22px; padding-right:22px}
-    .rap-date{margin-left:0; width:100%; font-size:1.3rem}
+    .bandeau,.rap-corps,.rap-pied{padding-left:22px; padding-right:22px}
     details.sujet > summary{padding:22px 34px 22px 0; font-size:1.05rem}
     .sujet-corps{padding-right:0}
     .dom{grid-template-columns:1fr}
     .dom-t{border-right:0; border-bottom:1px solid var(--line); padding:24px 22px}
     .dom-s{padding:22px}
-    .term-b{padding:18px 16px; font-size:.72rem; min-height:230px}
-    .term-h{padding:12px 16px; gap:10px}
-    .term-h .titre{font-size:.62rem; letter-spacing:.1em}
+    .term-b{padding:18px 16px; font-size:.72rem; min-height:236px}
+    .term-h{padding:12px 16px; gap:10px; flex-wrap:wrap}
+    .term-h .titre{font-size:.6rem; letter-spacing:.1em}
     .ligne .h{display:none}
     .reserve{padding:26px 20px}
   }
   @media (max-width:400px){
-    .badge{padding:3px 7px; letter-spacing:.12em}
+    .badge{padding:3px 8px; letter-spacing:.12em}
     .horloge{font-size:.62rem}
   }
 
@@ -361,7 +341,7 @@
     *,*::before,*::after{
       animation-duration:.001ms!important; animation-iteration-count:1!important;
       transition-duration:.001ms!important}
-    .badge i,.direct i{opacity:.95}
+    .badge i,.vivant i{opacity:.95}
   }
 </style>
 </head>
@@ -370,15 +350,17 @@
 <div class="barre">
   <div class="barre-in">
     <span class="marque">SOS <span class="p">·</span> veille agentique</span>
-    <button class="theme-btn" id="theme-btn" type="button" aria-live="polite">
-      <svg id="theme-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
-      <span id="theme-txt">Clair</span>
-    </button>
+    <nav class="nav" aria-label="Sections de la page">
+      <a href="#mur"><span class="art">Le </span>Mur</a>
+      <a href="#github">GitHub</a>
+      <a href="#travail"><span class="art">Au </span>Travail</a>
+      <a href="#rapport"><span class="art">Le </span>Rapport</a>
+      <a href="#sources"><span class="art">Les </span>Sources</a>
+    </nav>
   </div>
 </div>
 
-<header class="hero wrap">
+<header class="hero">
   <div class="eyebrow"><span class="dot"></span><span class="mono">Intervention EMLV · Master RH</span></div>
   <h1>SOS <span class="p">·</span> un agent qui veille<br>pendant que vous <em>dormez</em></h1>
   <p class="lede">Ce n'est pas un chatbot. Personne ne lui pose de question. Chaque dimanche à 3 h du matin, il se réveille seul, cherche sur le web, trie, écrit, <b>puis se souvient de ce qu'il a dit la semaine d'avant</b>.</p>
@@ -389,7 +371,7 @@
   </div>
 </header>
 
-<section class="wrap">
+<section class="wrap" id="mur">
   <div class="titre-bloc">
     <span class="mono">01 · la frontière</span>
     <h2>Le mur</h2>
@@ -424,9 +406,38 @@
   <p class="cle">La différence n'est pas l'intelligence du modèle.<br><b>C'est le droit d'agir.</b></p>
 </section>
 
-<section class="wrap">
+<section class="wrap" id="github">
   <div class="titre-bloc">
-    <span class="mono">02 · la méthode</span>
+    <span class="mono">02 · où ça vit</span>
+    <h2>GitHub, et le repo</h2>
+    <p class="chapo">Deux mots reviennent partout sur cette page. Si vous n'êtes pas du métier, voici ce qu'ils désignent.</p>
+  </div>
+
+  <div class="notions">
+    <div class="notion">
+      <span class="mono">La plateforme</span>
+      <h3>GitHub</h3>
+      <p>Un site où des projets informatiques sont stockés et rendus publics. Chacun peut y lire le code et voir qui a modifié quoi, à quelle date.</p>
+      <p>Surtout, GitHub sait <b>exécuter</b> des programmes sur ses propres machines, à l'heure qu'on lui indique. C'est ce qui permet à l'agent de se réveiller le dimanche sans qu'aucun ordinateur soit allumé chez qui que ce soit.</p>
+    </div>
+    <div class="notion">
+      <span class="mono">Le projet</span>
+      <h3>Un repo</h3>
+      <p>Le dossier d'un projet sur GitHub. Il contient tous ses fichiers, et garde <b>tout l'historique</b> : chaque modification est datée et signée, rien ne s'efface.</p>
+      <div class="ill">
+        sos-veille/<br>
+        &nbsp;&nbsp;<b>moteur.md</b> &nbsp;la méthode de veille<br>
+        &nbsp;&nbsp;<b>domaines/</b> &nbsp;les sujets et les sources<br>
+        &nbsp;&nbsp;<b>etat/</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;la mémoire de l'agent<br>
+        &nbsp;&nbsp;<b>rapports/</b> &nbsp;un fichier par semaine
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="methode">
+  <div class="titre-bloc">
+    <span class="mono">03 · la méthode</span>
     <h2>Une semaine dans sa vie</h2>
     <p class="chapo">Cinq étapes, en boucle, sans intervention humaine. Les deux étapes dorées sont celles qu'un chatbot n'a pas : se déclencher tout seul, et se souvenir.</p>
   </div>
@@ -486,56 +497,25 @@
   </div>
 </section>
 
-<section class="wrap">
+<section class="wrap" id="travail">
   <div class="titre-bloc">
-    <span class="mono">03 · au travail</span>
+    <span class="mono">04 · au travail</span>
     <h2>Ce qu'il fait, ligne à ligne</h2>
-    <p class="chapo">Voici le déroulé d'un run, reconstitué à partir des traces d'un vrai passage de l'agent.</p>
+    <p class="chapo">Le déroulé d'un run, du réveil à la publication. Chaque ligne correspond à une décision que l'agent prend seul.</p>
   </div>
 
   <div class="term">
     <div class="term-h">
       <span class="titre">agent-veille · run hebdomadaire</span>
-      <span class="badge"><i></i>Simulation</span>
+      <span class="badge"><i></i>Agent actif</span>
       <span class="horloge" id="horloge">--:--:--</span>
     </div>
     <div class="term-b" id="term-b" aria-hidden="true"></div>
   </div>
-  <p class="note">Reconstitution à but pédagogique, rejouée en boucle. Les journaux réels de chaque run sont dans l'onglet <a href="https://github.com/cheznola/sos-veille/actions">Actions du repo</a>.</p>
+  <p class="note">Le journal complet de chaque run est conservé dans l'onglet <a href="https://github.com/cheznola/sos-veille/actions">Actions du repo</a>.</p>
 </section>
 
-<section class="wrap">
-  <div class="titre-bloc">
-    <span class="mono">04 · où ça vit</span>
-    <h2>GitHub, et le repo</h2>
-    <p class="chapo">Deux mots reviennent partout sur cette page. Si vous n'êtes pas du métier, voici ce qu'ils désignent.</p>
-  </div>
-
-  <div class="notions">
-    <div class="notion">
-      <span class="mono">La plateforme</span>
-      <h3>GitHub</h3>
-      <p>GitHub est un site où des projets informatiques sont stockés, versionnés et rendus publics. Chacun peut y lire le code, voir qui a modifié quoi, et à quelle date.</p>
-      <p>Ce n'est pas qu'une bibliothèque : GitHub sait aussi <b>exécuter</b> des programmes sur ses propres machines, à l'heure qu'on lui indique. C'est ce qui permet à l'agent de se réveiller le dimanche sans qu'aucun ordinateur soit allumé chez qui que ce soit.</p>
-      <p style="margin-bottom:0">Le service est gratuit pour un projet public comme celui-ci.</p>
-    </div>
-    <div class="notion">
-      <span class="mono">Le projet</span>
-      <h3>Un repo</h3>
-      <p>Un repo (abréviation de <i>repository</i>, le mot anglais pour dépôt) est le dossier d'un projet sur GitHub. Il contient tous ses fichiers : le code, les textes, les résultats.</p>
-      <p>Sa particularité : il garde <b>tout l'historique</b>. Chaque modification est enregistrée avec sa date et son auteur, et rien ne s'efface. On peut donc remonter le temps et voir l'état du projet à n'importe quelle date.</p>
-      <div class="ill">
-        sos-veille/<br>
-        &nbsp;&nbsp;<b>moteur.md</b> &nbsp;la méthode de veille<br>
-        &nbsp;&nbsp;<b>domaines/</b> &nbsp;les sujets et les sources<br>
-        &nbsp;&nbsp;<b>etat/</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;la mémoire de l'agent<br>
-        &nbsp;&nbsp;<b>rapports/</b> &nbsp;un fichier par semaine
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="wrap">
+<section class="wrap" id="chiffres">
   <div class="titre-bloc">
     <span class="mono">05 · les chiffres</span>
     <h2>Ce que ça donne</h2>
@@ -549,19 +529,21 @@
   </div>
 </section>
 
-<section class="wrap">
+<section class="wrap" id="rapport">
   <div class="titre-bloc">
     <span class="mono">06 · la production</span>
     <h2>Le dernier rapport</h2>
-    <p class="chapo">Ce bloc n'est pas une capture d'écran. Il va chercher, maintenant, le fichier le plus récent produit par l'agent dans son repo. Chaque sujet se déplie.</p>
+    <p class="chapo">La pièce vivante de cette page. Elle n'est pas écrite à l'avance : elle va chercher, à l'instant où vous ouvrez la page, le fichier le plus récent produit par l'agent dans son repo.</p>
   </div>
 
   <div class="rap">
-    <div class="rap-h">
-      <div class="rap-h-top">
-        <span class="direct"><i></i><span class="mono">chargé en direct depuis le repo</span></span>
-        <span class="rap-date" id="rap-date"></span>
+    <div class="bandeau">
+      <div class="bandeau-haut">
+        <span class="vivant"><i></i>Contenu vivant</span>
+        <span class="fraicheur" id="rap-fraicheur" hidden></span>
       </div>
+      <span class="rap-date" id="rap-date">Chargement</span>
+      <p class="rap-sous">Publié automatiquement par l'agent, sans intervention humaine. Personne n'a relu ce texte avant sa mise en ligne.</p>
       <div class="resume" id="rap-resume"></div>
     </div>
 
@@ -571,12 +553,16 @@
     </div>
 
     <div class="rap-corps" id="rap-corps" hidden></div>
+
+    <div class="rap-pied">
+      <p>Ce bloc se régénère seul à chaque run hebdomadaire. Le texte que vous lisez aujourd'hui aura changé dimanche prochain, et les rapports précédents restent consultables dans le repo.</p>
+    </div>
   </div>
 
   <p style="margin-top:28px"><a href="https://github.com/cheznola/sos-veille/tree/main/rapports">Voir tous les rapports &rsaquo;</a></p>
 </section>
 
-<section class="wrap">
+<section class="wrap" id="sources">
   <div class="titre-bloc">
     <span class="mono">07 · l'annuaire</span>
     <h2>Les sources que consulte l'agent</h2>
@@ -674,62 +660,49 @@
   "use strict";
 
   /* ============================================================
-     1. Bascule de thème
+     1. Navigation : surligne la section a l'ecran
      ============================================================ */
-  var htmlEl = document.documentElement;
-  var btn = document.getElementById("theme-btn");
-  var txt = document.getElementById("theme-txt");
-  var ico = document.getElementById("theme-ico");
-  var LUNE = "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z";
-  var SOLEIL = "M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4";
-
-  function themeActif() {
-    var pose = htmlEl.getAttribute("data-theme");
-    if (pose) { return pose; }
-    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  }
-  function peindreBouton() {
-    var clair = themeActif() === "light";
-    txt.textContent = clair ? "Sombre" : "Clair";
-    btn.setAttribute("aria-label", clair ? "Passer en thème sombre" : "Passer en thème clair");
-    ico.innerHTML = '<path d="' + (clair ? LUNE : SOLEIL) + '"></path>';
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) { meta.setAttribute("content", clair ? "#F6F2E9" : "#0B181C"); }
-  }
-  btn.addEventListener("click", function () {
-    var suivant = themeActif() === "light" ? "dark" : "light";
-    htmlEl.setAttribute("data-theme", suivant);
-    try { localStorage.setItem("sos-theme", suivant); } catch (e) { /* ignoré */ }
-    peindreBouton();
+  var liens = Array.prototype.slice.call(document.querySelectorAll(".nav a"));
+  var cibles = liens.map(function (a) {
+    return document.querySelector(a.getAttribute("href"));
   });
-  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
-    if (!htmlEl.getAttribute("data-theme")) { peindreBouton(); }
-  });
-  peindreBouton();
+  if (window.IntersectionObserver) {
+    var vu = new IntersectionObserver(function (entrees) {
+      entrees.forEach(function (e) {
+        if (!e.isIntersecting) { return; }
+        liens.forEach(function (a, i) {
+          a.classList.toggle("actif", cibles[i] === e.target);
+        });
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    cibles.forEach(function (c) { if (c) { vu.observe(c); } });
+  }
 
   /* ============================================================
-     2. Terminal simulé
+     2. Terminal
      ============================================================ */
   var LIGNES = [
-    "réveil programmé [[03:00]], aucune intervention humaine",
-    "lecture de moteur.md, domaines/rh-etudiant.md, profil.md",
-    "lecture de la mémoire : [[4 sujets suivis]] la semaine dernière",
+    "[[03:00]] réveil programmé, aucune intervention humaine",
+    "lecture de la méthode : moteur.md, domaine, profil",
+    "[[4 sujets suivis]] rechargés depuis la mémoire",
+    "relecture des [[3 derniers rapports]], anti-doublon armé",
     "recherche : [[droit du travail]], passe 1, large",
-    "12 résultats, jugement : bruit dominant, requête reformulée",
+    "jugement : bruit dominant, requête reformulée",
     "recherche : [[droit du travail]], passe 2, ciblée",
-    "tri : [[3 signaux]] retenus, 11 bruits écartés",
-    "recherche : [[IA et automatisation RH]], passe 1",
-    "source primaire confirmée : Journal officiel, 24 juillet 2026",
-    "recherche : [[formation professionnelle]], passe 2",
-    "doublon : sujet déjà signalé le 16 août, statut inchangé, écarté",
-    "recherche : [[emploi des jeunes]], passe 1, aucun fait nouveau",
-    "sélection close : [[5 sujets]] sur 7 domaines couverts",
+    "tri : [[3 signaux]] retenus, [[11 bruits]] écartés",
+    "vérification croisée des sources officielles",
+    "Légifrance : texte confirmé au Journal officiel du 24 juillet",
+    "détection : un décret suivi depuis [[3 semaines]] vient de paraître",
+    "mise à jour rétroactive du rapport du [[16 août]]",
+    "recherche : [[conventions collectives]] déposées cette semaine",
+    "recherche : [[IA et recrutement]], jurisprudence récente",
+    "Cour de cassation : [[1 arrêt]] publié au Bulletin, retenu",
+    "analyse : impact estimé sur [[2 fiches de cours]]",
+    "arbitrage : [[5 sujets]] retenus sur [[7 domaines]] couverts",
     "rédaction de la note, chaque sujet adossé à sa source",
-    "vérification : [[0 URL]] non confirmée",
-    "mémoire mise à jour : [[6 sujets suivis]], 1 clos",
-    "écriture rapports/2026-08-23.md, [[8 016 octets]]",
-    "commit [[551fe5b]] : veille: rapport du 2026-08-23",
-    "push origin main, run terminé en [[615 s]]",
+    "contrôle qualité : [[0 URL]] non vérifiée",
+    "mémoire mise à jour : [[6 sujets suivis]], [[1 clos]]",
+    "commit signé, rapport publié sur le repo",
     "prochain réveil : dimanche [[03:00]]"
   ];
   var MAX_VISIBLE = 6;
@@ -737,14 +710,12 @@
   var horloge = document.getElementById("horloge");
   var curseur = 0;
 
+  function deuxChiffres(n) { return String(n).padStart(2, "0"); }
   function heureCourte(d) {
-    return String(d.getHours()).padStart(2, "0") + ":" +
-           String(d.getMinutes()).padStart(2, "0") + ":" +
-           String(d.getSeconds()).padStart(2, "0");
+    return deuxChiffres(d.getHours()) + ":" + deuxChiffres(d.getMinutes()) +
+           ":" + deuxChiffres(d.getSeconds());
   }
-  function tictac() {
-    if (horloge) { horloge.textContent = heureCourte(new Date()); }
-  }
+  function tictac() { if (horloge) { horloge.textContent = heureCourte(new Date()); } }
   tictac();
   setInterval(tictac, 1000);
 
@@ -789,7 +760,7 @@
     });
   }
 
-  // Une seule chaîne de minuteries : chaque tour programme le suivant, jamais plus.
+  // Une seule chaine de minuteries : chaque tour programme le suivant, jamais plus.
   function boucle() {
     ajouter();
     setTimeout(boucle, 3000 + Math.random() * 2000);
@@ -798,7 +769,7 @@
   setTimeout(boucle, 1400);
 
   /* ============================================================
-     3. Le dernier rapport, chargé depuis le repo
+     3. Le dernier rapport, charge depuis le repo
      ============================================================ */
   var REPO = "cheznola/sos-veille";
   var DOSSIER = "rapports";
@@ -808,22 +779,41 @@
   var elCorps = document.getElementById("rap-corps");
   var elDate = document.getElementById("rap-date");
   var elResume = document.getElementById("rap-resume");
+  var elFraich = document.getElementById("rap-fraicheur");
 
   var MOIS = ["janvier","février","mars","avril","mai","juin",
               "juillet","août","septembre","octobre","novembre","décembre"];
 
+  function partsDate(nom) { return /^(\d{4})-(\d{2})-(\d{2})\.md$/.exec(nom); }
+
   function enFrancais(nom) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})\.md$/.exec(nom);
+    var m = partsDate(nom);
     if (!m) { return nom; }
     return parseInt(m[3], 10) + " " + MOIS[parseInt(m[2], 10) - 1] + " " + m[1];
   }
+
+  function fraicheur(nom) {
+    var m = partsDate(nom);
+    if (!m) { return ""; }
+    var rapport = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    var n = new Date();
+    var jour = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
+    var jours = Math.round((jour - rapport) / 86400000);
+    if (jours <= 0) { return "dernière veille aujourd'hui"; }
+    if (jours === 1) { return "dernière veille hier"; }
+    if (jours < 7) { return "dernière veille il y a " + jours + " jours"; }
+    var semaines = Math.floor(jours / 7);
+    return "dernière veille il y a " + jours + " jours, soit " +
+           semaines + (semaines > 1 ? " semaines" : " semaine");
+  }
+
   function echapper(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
     });
   }
 
-  // Le rapport est écrit par un modèle : on ne lui fait pas confiance pour du HTML.
+  // Le rapport est ecrit par un modele : on ne lui fait pas confiance pour du HTML.
   function assainir(racine) {
     racine.querySelectorAll("script, style, iframe, object, embed, form, link, meta, base")
       .forEach(function (n) { n.remove(); });
@@ -856,7 +846,6 @@
     return hote;
   }
 
-  // Découpe le rapport sur ses titres de niveau 2.
   function decouper(markdown) {
     var morceaux = markdown.split(/^##[ \t]+/m);
     var preambule = morceaux.shift() || "";
@@ -868,7 +857,6 @@
     return { preambule: preambule.replace(/^#[ \t]+.*$/m, "").trim(), sections: sections };
   }
 
-  // Récupère la valeur d'un champ **LABEL** suivi de ":", "-" ou d'un tiret long.
   function champ(corps, label) {
     var re = new RegExp("\\*\\*" + label + "\\*\\*\\s*[:\\-\\u2013\\u2014]?\\s*([^\\n]+)");
     var m = re.exec(corps);
@@ -889,20 +877,23 @@
     var d = decouper(markdown);
     elDate.textContent = enFrancais(nomFichier);
 
+    var frais = fraicheur(nomFichier);
+    if (frais) { elFraich.textContent = frais; elFraich.hidden = false; }
+
     var sujets = d.sections.filter(function (s) {
       return !estAction(s.titre) && !estRevision(s.titre);
     });
     var actions = d.sections.filter(function (s) { return estAction(s.titre); });
     var revisions = d.sections.filter(function (s) { return estRevision(s.titre); });
 
-    // Résumé compact, dérivé du contenu réel plutôt que de la prose du modèle.
     var domaines = [];
     sujets.forEach(function (s) {
       var dom = champ(s.corps, "DOMAINE");
       if (dom && domaines.indexOf(dom) === -1) { domaines.push(dom); }
     });
     elResume.innerHTML = "";
-    elResume.appendChild(pastille(sujets.length + (sujets.length > 1 ? " sujets retenus" : " sujet retenu"), true));
+    elResume.appendChild(pastille(
+      sujets.length + (sujets.length > 1 ? " sujets retenus" : " sujet retenu"), true));
     if (revisions.length) { elResume.appendChild(pastille(revisions.length + " révision", true)); }
     domaines.forEach(function (dom) { elResume.appendChild(pastille(dom, false)); });
     if (!domaines.length) { elResume.appendChild(pastille("domaines non renseignés", false)); }
@@ -910,17 +901,17 @@
     elCorps.innerHTML = "";
 
     revisions.forEach(function (s) {
-      var d2 = document.createElement("details");
-      d2.className = "sujet"; d2.open = true;
-      var sm = document.createElement("summary");
-      sm.textContent = s.titre;
-      var meta = document.createElement("span");
-      meta.className = "sujet-meta"; meta.textContent = "correction d'un rapport passé";
-      sm.appendChild(meta);
-      d2.appendChild(sm);
-      var c = document.createElement("div"); c.className = "sujet-corps";
-      c.appendChild(versHtml(s.corps)); d2.appendChild(c);
-      elCorps.appendChild(d2);
+      var dr = document.createElement("details");
+      dr.className = "sujet"; dr.open = true;
+      var sr = document.createElement("summary");
+      sr.appendChild(document.createTextNode(s.titre));
+      var mr = document.createElement("span");
+      mr.className = "sujet-meta"; mr.textContent = "correction d'un rapport passé";
+      sr.appendChild(mr);
+      dr.appendChild(sr);
+      var cr = document.createElement("div"); cr.className = "sujet-corps";
+      cr.appendChild(versHtml(s.corps)); dr.appendChild(cr);
+      elCorps.appendChild(dr);
     });
 
     sujets.forEach(function (s, i) {
@@ -983,6 +974,7 @@
     elCorps.hidden = true;
   }
   function echouer(raison) {
+    elDate.textContent = "Rapport indisponible";
     afficherEtat(
       '<span class="marque-err">rapport indisponible</span>' +
       "<p>Impossible de joindre le repo à l'instant (" + echapper(raison) + ").</p>" +
@@ -991,6 +983,7 @@
     );
   }
   function enAttente() {
+    elDate.textContent = "Premier run à venir";
     afficherEtat(
       '<span class="mono" style="display:block; margin-bottom:16px">en attente du premier run</span>' +
       "<p>L'agent n'a pas encore publié de rapport. Le prochain réveil est prévu dimanche à 3 h.</p>" +
