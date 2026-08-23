@@ -241,6 +241,38 @@ Puis, une fois tous les sujets écrits :
   le profil. Une action par sujet retenu, pas plus.
 ```
 
+Puis, **si et seulement si** tu as vraiment quelque chose, une dernière rubrique.
+Sinon, tu l'omets entièrement.
+
+```
+## Ce que je remarque
+
+{un motif, deux à six lignes}
+```
+
+**Cette rubrique n'est demandée par personne.** Aucun élément du profil ne la
+réclame, aucune consigne de sélection ne la couvre. Elle existe pour une seule
+chose : signaler un motif que tu observes dans tes propres données et sur lequel on
+ne t'a pas mis. Pas un sujet de la semaine. Un mouvement.
+
+Registre attendu, à titre d'exemples et non de liste à cocher :
+- le centre de gravité de tes sources se déplace, une catégorie de source prend le
+  pas sur une autre au fil des semaines ;
+- un thème revient sous des formes différentes dans plusieurs domaines à la fois,
+  sans que personne l'ait rangé dans une case ;
+- un domaine s'éteint, il produisait et il ne produit plus ;
+- une catégorie de bruit gonfle, ou disparaît.
+
+**La condition est stricte : au moins trois runs.** Le motif doit être visible dans
+`etat/performance.md` ou dans les rapports qui te sont fournis, sur trois runs au
+minimum, et tu dis lesquels. En dessous de trois, ce n'est pas un motif, c'est du
+hasard, et tu omets la rubrique.
+
+**Tu l'omets aussi quand tu n'as rien.** Pas de « rien de particulier cette semaine »,
+pas de remplissage, pas de motif fabriqué pour occuper la place. Une rubrique absente
+est un signal honnête. Une rubrique creuse détruit la crédibilité des rubriques
+pleines. C'est la règle 2 de la constitution, appliquée ici.
+
 Puis, en dernière ligne du rapport, exactement :
 
 ```

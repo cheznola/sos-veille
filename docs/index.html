@@ -226,6 +226,19 @@
   .sujet-corps{padding:2px 40px 30px 0; animation:deplie .28s ease both}
   @keyframes deplie{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
 
+  /* « Ce que je remarque » : rubrique que personne n'a demandee, donc traitee
+     autrement que les sujets du rapport. Accent teal, jamais repliee. */
+  .remarque{border:1px solid var(--line); border-left:2px solid var(--teal);
+            background:var(--bg); margin-top:30px; padding:26px 30px}
+  .remarque .tag{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px;
+                 margin-bottom:18px}
+  .remarque .tag .mono{color:var(--teal)}
+  .remarque .tag .spontane{font-family:var(--mono); font-size:.6rem;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft);
+    border:1px solid var(--line); padding:4px 10px}
+  .remarque h3{font-family:var(--sans); font-weight:600; font-size:1.13rem;
+               letter-spacing:-.012em; margin:0 0 14px; line-height:1.35}
+
   details.simple{border:1px solid var(--line); background:var(--bg); margin-top:30px}
   details.simple > summary{list-style:none; cursor:pointer; padding:18px 24px;
     font-family:var(--mono); font-size:.68rem; letter-spacing:.16em;
@@ -320,6 +333,7 @@
     .ch:nth-child(2n){border-right:0}
     .ch:nth-last-child(-n+2){border-bottom:0}
     .bandeau,.rap-corps,.rap-pied{padding-left:22px; padding-right:22px}
+    .remarque{padding:22px}
     details.sujet > summary{padding:22px 34px 22px 0; font-size:1.05rem}
     .sujet-corps{padding-right:0}
     .dom{grid-template-columns:1fr}
@@ -865,6 +879,7 @@
 
   function estAction(titre) { return /^ce que tu peux en faire/i.test(titre); }
   function estRevision(titre) { return /^r[ée]vision/i.test(titre); }
+  function estRemarque(titre) { return /^ce que je remarque/i.test(titre); }
 
   function pastille(texte, fort) {
     var s = document.createElement("span");
@@ -881,10 +896,11 @@
     if (frais) { elFraich.textContent = frais; elFraich.hidden = false; }
 
     var sujets = d.sections.filter(function (s) {
-      return !estAction(s.titre) && !estRevision(s.titre);
+      return !estAction(s.titre) && !estRevision(s.titre) && !estRemarque(s.titre);
     });
     var actions = d.sections.filter(function (s) { return estAction(s.titre); });
     var revisions = d.sections.filter(function (s) { return estRevision(s.titre); });
+    var remarques = d.sections.filter(function (s) { return estRemarque(s.titre); });
 
     var domaines = [];
     sujets.forEach(function (s) {
@@ -948,6 +964,29 @@
       corps.appendChild(versHtml(s.corps));
       det.appendChild(corps);
       elCorps.appendChild(det);
+    });
+
+    // Rubrique optionnelle : l'agent ne la produit que s'il a reellement
+    // observe un motif sur trois runs au moins. Absente la plupart du temps.
+    remarques.forEach(function (s) {
+      var bloc = document.createElement("div");
+      bloc.className = "remarque";
+
+      var tag = document.createElement("div");
+      tag.className = "tag";
+      var lab = document.createElement("span");
+      lab.className = "mono"; lab.textContent = "observation spontanée";
+      tag.appendChild(lab);
+      var sp = document.createElement("span");
+      sp.className = "spontane"; sp.textContent = "personne ne lui a demandé de chercher ça";
+      tag.appendChild(sp);
+      bloc.appendChild(tag);
+
+      var h = document.createElement("h3");
+      h.textContent = s.titre;
+      bloc.appendChild(h);
+      bloc.appendChild(versHtml(s.corps));
+      elCorps.appendChild(bloc);
     });
 
     if (d.preambule) {
