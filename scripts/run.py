@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,7 +27,10 @@ CONSTITUTION = RACINE / "constitution.md"
 MOTEUR = RACINE / "moteur.md"
 DOMAINE = RACINE / "domaines" / "rh-etudiant.md"
 PROFIL = RACINE / "profil.md"
-SUJETS_SUIVIS = RACINE / "etat" / "sujets-suivis.md"
+ETAT = RACINE / "etat"
+SUJETS_SUIVIS = ETAT / "sujets-suivis.md"
+PERFORMANCE = ETAT / "performance.md"
+BILANS = ETAT / "bilans"
 RAPPORTS = RACINE / "rapports"
 
 # Fichiers que l'agent n'a pas le droit de toucher. Leur empreinte est relevée
@@ -39,9 +43,47 @@ MODELE = "claude-sonnet-4-6"
 MAX_TOKENS = 32000
 MAX_REPRISES = 6  # nombre de reprises autorisées sur stop_reason == "pause_turn"
 
-OUTIL_RECHERCHE_WEB = {"type": "web_search_20260209", "name": "web_search"}
+# Budget de recherche du premier agent. `max_uses` est un plafond dur côté
+# serveur : au-delà, l'outil renvoie l'erreur max_uses_exceeded. Le moteur
+# demande à l'agent de dépenser ce budget là où le signal est le plus fort
+# plutôt que d'épuiser toutes les passes sur tous les domaines.
+BUDGET_RECHERCHES = 15
+OUTIL_RECHERCHE_WEB = {
+    "type": "web_search_20260209",
+    "name": "web_search",
+    "max_uses": BUDGET_RECHERCHES,
+}
 
-MARQUEURS = ("===RAPPORT===", "===SUJETS-SUIVIS===", "===CORRECTIONS===")
+# Ordre imposé des blocs de sortie. Les obligatoires d'abord, dans cet ordre
+# exact ; les optionnels ensuite, dans cet ordre exact eux aussi.
+MARQUEURS_OBLIGATOIRES = (
+    "===RAPPORT===",
+    "===SUJETS-SUIVIS===",
+    "===CORRECTIONS===",
+    "===BILAN===",
+)
+MARQUEURS_OPTIONNELS: tuple[str, ...] = ()
+MARQUEURS = MARQUEURS_OBLIGATOIRES + MARQUEURS_OPTIONNELS
+MARQUEURS_OPTIONNELS_NOMS = tuple(m.strip("=") for m in MARQUEURS_OPTIONNELS)
+
+APPRECIATIONS = ("riche", "moyen", "vide")
+NB_DOMAINES = 7
+
+MOTIF_DOMAINE_BILAN = re.compile(
+    r"\[\[DOMAINE:\s*(?P<intitule>[^\]\n]+?)\s*\]\]\s*\n"
+    r"(?P<corps>.*?)"
+    r"\n?\[\[/DOMAINE\]\]",
+    re.DOTALL,
+)
+
+# Les clés du bilan sont acceptées accentuées ou non : le modèle écrit parfois
+# APPRECIATION sans accent, et le run ne doit pas échouer pour si peu.
+CLES_BILAN = {
+    "retenus": r"RETENUS",
+    "ecartes": r"[EÉ]CART[EÉ]S",
+    "sources": r"SOURCES",
+    "appreciation": r"APPR[EÉ]CIATION",
+}
 
 MOTIF_CORRECTION = re.compile(
     r"\[\[CORRECTION:\s*(?P<cible>[^\]\n]+?)\s*\]\]\s*\n"
@@ -116,6 +158,13 @@ def verifier_empreintes(releve: dict[Path, str], moment: str) -> None:
             )
 
 
+def lire_si_present(chemin: Path, defaut: str) -> str:
+    """Comme lire(), mais un fichier absent ou vide donne le texte de repli."""
+    if not chemin.is_file():
+        return defaut
+    return chemin.read_text(encoding="utf-8").strip() or defaut
+
+
 def derniers_rapports() -> list[tuple[str, str]]:
     """Les N derniers rapports, du plus ancien au plus récent."""
     if not RAPPORTS.is_dir():
@@ -141,6 +190,13 @@ def construire_prompt(aujourdhui: str) -> str:
         "\n\n########## DOMAINE (domaines/rh-etudiant.md) ##########\n\n" + lire(DOMAINE),
         "\n\n########## PROFIL (profil.md) ##########\n\n" + lire(PROFIL),
         "\n\n########## MÉMOIRE (etat/sujets-suivis.md) ##########\n\n" + lire(SUJETS_SUIVIS),
+        "\n\n########## PERFORMANCE CUMULÉE (etat/performance.md) ##########\n\n"
+        "Ce sont les chiffres de tes runs passés, tirés de tes propres bilans.\n"
+        "C'est la seule matière admise pour justifier une évolution de tes règles.\n\n"
+        + lire_si_present(
+            PERFORMANCE,
+            "Aucun historique pour l'instant : c'est le premier run bilanté.",
+        ),
     ]
 
     precedents = derniers_rapports()
@@ -158,11 +214,12 @@ def construire_prompt(aujourdhui: str) -> str:
             "et il n'y a donc aucune correction possible."
         )
 
+    obligatoires = "\n".join(MARQUEURS_OBLIGATOIRES)
     morceaux.append(
         "\n\n########## CE QUE TU FAIS MAINTENANT ##########\n\n"
-        "Mène les deux passes de recherche par domaine, sélectionne, puis réponds en "
-        "trois blocs délimités exactement comme le prescrit la méthode :\n"
-        f"{MARQUEURS[0]}\n{MARQUEURS[1]}\n{MARQUEURS[2]}\n"
+        "Cherche là où le signal est le plus fort, sélectionne, puis réponds en blocs "
+        "délimités exactement comme le prescrit la méthode.\n\n"
+        f"Blocs obligatoires, dans cet ordre :\n{obligatoires}\n\n"
         "Rien avant le premier délimiteur, rien après le dernier bloc."
     )
     return "".join(morceaux)
@@ -209,8 +266,20 @@ def appeler_modele(prompt: str) -> tuple[str, int]:
         for bloc in reponse.content:
             if bloc.type == "text":
                 texte.append(bloc.text)
-            elif bloc.type == "server_tool_use" and bloc.name == "web_search":
-                recherches += 1
+
+        # Le compteur d'usage de l'API est la source fiable : il couvre aussi
+        # les recherches lancées depuis le filtrage dynamique, que le parcours
+        # des blocs de premier niveau ne verrait pas. Repli sur le comptage des
+        # blocs si le champ n'est pas renvoyé.
+        usage = getattr(reponse.usage, "server_tool_use", None)
+        compte = getattr(usage, "web_search_requests", None) if usage else None
+        if compte is None:
+            compte = sum(
+                1
+                for bloc in reponse.content
+                if bloc.type == "server_tool_use" and bloc.name == "web_search"
+            )
+        recherches += compte
 
         if reponse.stop_reason != "pause_turn":
             if reponse.stop_reason == "max_tokens":
@@ -255,51 +324,78 @@ def normaliser_delimiteurs(reponse: str) -> str:
     return reponse
 
 
-def decouper_blocs(reponse: str) -> tuple[str, str, str]:
+def decouper_blocs(reponse: str) -> dict[str, str]:
+    """Découpe la réponse en blocs, indexés par nom de bloc sans les `===`.
+
+    Les blocs obligatoires doivent tous être présents, une seule fois, non
+    vides. Les blocs optionnels peuvent manquer, mais pas apparaître deux fois.
+    Tous les blocs présents doivent respecter l'ordre imposé.
+    """
     # On ne fait pas confiance à la mise en forme du modèle : on la normalise
     # d'abord, on découpe ensuite. Les garde-fous de fond (bloc absent,
     # délimiteur en double, ordre imposé) restent inchangés.
     reponse = normaliser_delimiteurs(reponse)
 
-    positions = []
+    trouves: list[tuple[str, re.Match]] = []
     for marqueur in MARQUEURS:
         motif = re.compile(rf"^{re.escape(marqueur)}\s*$", re.MULTILINE)
-        trouves = list(motif.finditer(reponse))
-        if not trouves:
-            raise ErreurVeille(
-                f"Bloc manquant dans la réponse du modèle : {marqueur}\n"
-                "Aucun fichier n'a été modifié. Réponse reçue (500 premiers caractères) :\n"
-                f"{reponse[:500]}"
-            )
-        if len(trouves) > 1:
-            raise ErreurVeille(
-                f"Délimiteur {marqueur} présent {len(trouves)} fois dans la réponse. "
-                "Découpage ambigu, aucun fichier n'a été modifié."
-            )
-        positions.append(trouves[0])
+        occurrences = list(motif.finditer(reponse))
 
-    if not positions[0].start() < positions[1].start() < positions[2].start():
+        if len(occurrences) > 1:
+            raise ErreurVeille(
+                f"Délimiteur {marqueur} présent {len(occurrences)} fois dans la "
+                "réponse. Découpage ambigu, aucun fichier n'a été modifié."
+            )
+        if not occurrences:
+            if marqueur in MARQUEURS_OBLIGATOIRES:
+                raise ErreurVeille(
+                    f"Bloc manquant dans la réponse du modèle : {marqueur}\n"
+                    "Aucun fichier n'a été modifié. Réponse reçue "
+                    f"(500 premiers caractères) :\n{reponse[:500]}"
+                )
+            continue
+        trouves.append((marqueur, occurrences[0]))
+
+    # Ordre imposé : les blocs présents doivent apparaître dans l'ordre de
+    # MARQUEURS, sans exception, y compris quand des optionnels manquent.
+    positions = [occurrence.start() for _, occurrence in trouves]
+    if positions != sorted(positions):
+        attendu = " puis ".join(m.strip("=") for m, _ in trouves)
         raise ErreurVeille(
-            "Les trois blocs ne sont pas dans l'ordre attendu "
-            "(RAPPORT, SUJETS-SUIVIS, CORRECTIONS). Aucun fichier n'a été modifié."
+            "Les blocs ne sont pas dans l'ordre attendu. Ordre imposé : "
+            f"{attendu}. Aucun fichier n'a été modifié."
         )
 
-    # Tout ce qui précède ===RAPPORT=== est un préambule bavard du modèle :
-    # on l'ignore, le contenu utile commence à la fin du premier délimiteur.
-    rapport = reponse[positions[0].end():positions[1].start()].strip()
-    suivis = reponse[positions[1].end():positions[2].start()].strip()
-    corrections = reponse[positions[2].end():].strip()
-
-    if not rapport:
-        raise ErreurVeille("Le bloc RAPPORT est vide. Aucun fichier n'a été modifié.")
-    if not suivis:
-        raise ErreurVeille("Le bloc SUJETS-SUIVIS est vide. Aucun fichier n'a été modifié.")
-    if not corrections:
-        raise ErreurVeille(
-            "Le bloc CORRECTIONS est vide : il doit contenir au moins le mot AUCUNE. "
-            "Aucun fichier n'a été modifié."
+    # Tout ce qui précède le premier délimiteur est un préambule bavard du
+    # modèle : on l'ignore. Chaque bloc court jusqu'au délimiteur suivant.
+    blocs: dict[str, str] = {}
+    for rang, (marqueur, occurrence) in enumerate(trouves):
+        suivant = (
+            trouves[rang + 1][1].start() if rang + 1 < len(trouves) else len(reponse)
         )
-    return rapport, suivis, corrections
+        blocs[marqueur.strip("=")] = reponse[occurrence.end():suivant].strip()
+
+    for marqueur in MARQUEURS_OBLIGATOIRES:
+        nom = marqueur.strip("=")
+        if not blocs.get(nom):
+            detail = (
+                " : il doit contenir au moins le mot AUCUNE"
+                if nom == "CORRECTIONS"
+                else ""
+            )
+            raise ErreurVeille(
+                f"Le bloc {nom} est vide{detail}. Aucun fichier n'a été modifié."
+            )
+
+    for nom, contenu in blocs.items():
+        if nom in MARQUEURS_OPTIONNELS_NOMS and not contenu:
+            raise ErreurVeille(
+                f"Le bloc optionnel {nom} est présent mais vide. Un bloc "
+                "optionnel sans contenu doit être omis entièrement. "
+                "Aucun fichier n'a été modifié."
+            )
+
+    return blocs
 
 
 def analyser_corrections(bloc: str, rapport_du_jour: Path) -> list[tuple[Path, str]]:
@@ -345,6 +441,295 @@ def analyser_corrections(bloc: str, rapport_du_jour: Path) -> list[tuple[Path, s
             )
         corrections.append((chemin, encart))
     return corrections
+
+
+# ---------------------------------------------------------------------- bilan
+
+
+def _valeur_bilan(corps: str, cle: str) -> str | None:
+    trouve = re.search(rf"^\s*{CLES_BILAN[cle]}\s*:\s*(.*)$", corps, re.MULTILINE)
+    return trouve.group(1).strip() if trouve else None
+
+
+def _liste_bilan(brut: str) -> list[str]:
+    """Découpe une valeur du bilan en éléments. `aucun` vaut liste vide."""
+    if brut.strip().lower().rstrip(".") in ("aucun", "aucune", "néant", "neant", "-"):
+        return []
+    return [morceau.strip() for morceau in brut.split("|") if morceau.strip()]
+
+
+def analyser_bilan(bloc: str) -> list[dict]:
+    """Extrait les sept fiches de domaine du bloc BILAN.
+
+    Format attendu, un groupe par domaine, l'intitulé repris tel quel du
+    fichier de domaine, numéro compris :
+
+        [[DOMAINE: 1. Droit du travail et cadre réglementaire]]
+        RETENUS: titre A | titre B
+        ÉCARTÉS: piste 1 | piste 2
+        SOURCES: Légifrance | Cour de cassation
+        APPRÉCIATION: riche
+        [[/DOMAINE]]
+    """
+    fiches: list[dict] = []
+    numeros_vus: set[int] = set()
+
+    for trouvee in MOTIF_DOMAINE_BILAN.finditer(bloc):
+        intitule = trouvee.group("intitule").strip()
+        corps = trouvee.group("corps")
+
+        numero = re.match(r"(\d+)\s*[.)]?", intitule)
+        if not numero:
+            raise ErreurVeille(
+                f"Fiche de bilan sans numéro de domaine : « {intitule} ». "
+                "L'intitulé doit reprendre celui du fichier de domaine, numéro "
+                "compris. Aucun fichier n'a été modifié."
+            )
+        rang = int(numero.group(1))
+        if not 1 <= rang <= NB_DOMAINES:
+            raise ErreurVeille(
+                f"Numéro de domaine hors des {NB_DOMAINES} domaines connus : "
+                f"« {intitule} ». Aucun fichier n'a été modifié."
+            )
+        if rang in numeros_vus:
+            raise ErreurVeille(
+                f"Le domaine {rang} apparaît deux fois dans le bilan. "
+                "Aucun fichier n'a été modifié."
+            )
+        numeros_vus.add(rang)
+
+        manquantes = [cle for cle in CLES_BILAN if _valeur_bilan(corps, cle) is None]
+        if manquantes:
+            raise ErreurVeille(
+                f"Fiche de bilan incomplète pour « {intitule} » : clés "
+                f"manquantes {', '.join(sorted(manquantes))}. "
+                "Aucun fichier n'a été modifié."
+            )
+
+        appreciation = _valeur_bilan(corps, "appreciation").strip().lower().rstrip(".")
+        if appreciation not in APPRECIATIONS:
+            raise ErreurVeille(
+                f"Appréciation invalide pour « {intitule} » : « {appreciation} ». "
+                f"Valeurs admises : {', '.join(APPRECIATIONS)}. "
+                "Aucun fichier n'a été modifié."
+            )
+
+        retenus = _liste_bilan(_valeur_bilan(corps, "retenus"))
+        if appreciation == "vide" and retenus:
+            raise ErreurVeille(
+                f"Le domaine « {intitule} » est apprécié « vide » alors que "
+                f"{len(retenus)} sujet(s) y sont retenus. Contradiction, "
+                "aucun fichier n'a été modifié."
+            )
+
+        fiches.append(
+            {
+                "rang": rang,
+                "intitule": intitule,
+                "retenus": retenus,
+                "ecartes": _liste_bilan(_valeur_bilan(corps, "ecartes")),
+                "sources": _liste_bilan(_valeur_bilan(corps, "sources")),
+                "appreciation": appreciation,
+            }
+        )
+
+    if len(fiches) != NB_DOMAINES:
+        raise ErreurVeille(
+            f"Le bilan couvre {len(fiches)} domaine(s) au lieu de {NB_DOMAINES}. "
+            "Chaque domaine doit avoir sa fiche, même vide. "
+            "Aucun fichier n'a été modifié."
+        )
+
+    return sorted(fiches, key=lambda f: f["rang"])
+
+
+def rendre_bilan(fiches: list[dict], date_du_jour: str, recherches: int) -> str:
+    """Le fichier etat/bilans/AAAA-MM-JJ.md, format stable d'un run à l'autre."""
+    lignes = [
+        f"# Bilan du run du {date_du_jour}",
+        "",
+        f"<!-- bilan automatique -->",
+        f"*{recherches} recherche{'s' if recherches > 1 else ''} web sur ce run. "
+        "Ce chiffre est compté par le script, jamais par le modèle.*",
+        "",
+    ]
+    for fiche in fiches:
+        lignes += [
+            f"[[DOMAINE: {fiche['intitule']}]]",
+            "RETENUS: " + (" | ".join(fiche["retenus"]) or "aucun"),
+            "ÉCARTÉS: " + (" | ".join(fiche["ecartes"]) or "aucun"),
+            "SOURCES: " + (" | ".join(fiche["sources"]) or "aucune"),
+            f"APPRÉCIATION: {fiche['appreciation']}",
+            "[[/DOMAINE]]",
+            "",
+        ]
+    return "\n".join(lignes).rstrip() + "\n"
+
+
+# ---------------------------------------------------------------- performance
+
+
+def _normaliser_source(nom: str) -> str:
+    """Forme comparable d'un nom de source : sans accent, sans ponctuation."""
+    sans_accent = unicodedata.normalize("NFKD", nom)
+    sans_accent = "".join(c for c in sans_accent if not unicodedata.combining(c))
+    sans_accent = re.sub(r"\([^)]*\)", " ", sans_accent)
+    return re.sub(r"[^a-z0-9]+", " ", sans_accent.lower()).strip()
+
+
+def sources_de_reference() -> dict[int, list[str]]:
+    """Les sources déclarées par domaine dans le fichier de domaine.
+
+    Le fichier étant modifiable par l'agent, cette lecture est refaite à chaque
+    run : une source ajoutée ou retirée par une évolution est prise en compte
+    dès le bilan suivant.
+    """
+    texte = DOMAINE.read_text(encoding="utf-8")
+    par_domaine: dict[int, list[str]] = {}
+
+    # Chaque domaine commence par « ### N. Intitulé » et court jusqu'au titre
+    # suivant. Dans ce morceau, le paragraphe « Sources de référence : … »
+    # porte la liste, séparée par des points médians, sur une ou plusieurs
+    # lignes, et se termine au premier point suivi d'une fin de paragraphe.
+    for titre in re.finditer(r"^###\s+(\d+)\.[^\n]*$", texte, re.MULTILINE):
+        rang = int(titre.group(1))
+        suite = texte[titre.end():]
+        prochain = re.search(r"^###\s|^##\s|^---\s*$", suite, re.MULTILINE)
+        morceau = suite[: prochain.start()] if prochain else suite
+
+        depart = re.search(
+            r"^Sources de référence\s*:\s*(.*?)(?:\n\s*\n|\Z)",
+            morceau,
+            re.MULTILINE | re.DOTALL,
+        )
+        if not depart:
+            continue
+        brut = " ".join(depart.group(1).split()).rstrip(".")
+        par_domaine[rang] = [s.strip() for s in brut.split("·") if s.strip()]
+
+    return par_domaine
+
+
+def bilans_archives() -> list[tuple[str, list[dict]]]:
+    """Tous les bilans archivés, du plus ancien au plus récent."""
+    if not BILANS.is_dir():
+        return []
+    archives = []
+    for fichier in sorted(BILANS.glob("*.md")):
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}\.md", fichier.name):
+            continue
+        try:
+            fiches = analyser_bilan(fichier.read_text(encoding="utf-8"))
+        except ErreurVeille:
+            # Un bilan ancien mal formé ne doit pas bloquer le run du jour :
+            # il est ignoré du cumul, et signalé.
+            print(
+                f"Bilan ignoré car illisible : etat/bilans/{fichier.name}",
+                file=sys.stderr,
+            )
+            continue
+        archives.append((fichier.stem, fiches))
+    return archives
+
+
+def rendre_performance(archives: list[tuple[str, list[dict]]]) -> str:
+    """Recalcule etat/performance.md à partir de tous les bilans archivés.
+
+    Recalcul intégral, jamais incrémental : les bilans sont la source de
+    vérité, performance.md n'en est qu'une vue. Aucune dérive possible.
+    """
+    reference = sources_de_reference()
+    cumul: dict[int, dict] = {}
+
+    for _, fiches in archives:
+        for fiche in fiches:
+            entree = cumul.setdefault(
+                fiche["rang"],
+                {"intitule": fiche["intitule"], "retenus": 0, "vides": 0, "sources": {}},
+            )
+            entree["intitule"] = fiche["intitule"]
+            entree["retenus"] += len(fiche["retenus"])
+            if fiche["appreciation"] == "vide" or not fiche["retenus"]:
+                entree["vides"] += 1
+            for source in fiche["sources"]:
+                entree["sources"][source] = entree["sources"].get(source, 0) + 1
+
+    nb_runs = len(archives)
+    lignes = [
+        "# Performance cumulée de la veille",
+        "",
+        "<!-- fichier recalculé à chaque run à partir de etat/bilans/ -->",
+        f"*{nb_runs} run{'s' if nb_runs > 1 else ''} bilanté"
+        f"{'s' if nb_runs > 1 else ''}"
+        + (
+            f", du {archives[0][0]} au {archives[-1][0]}.*"
+            if archives
+            else ".*"
+        ),
+        "",
+        "C'est la matière chiffrée de l'auto-évaluation. Toute évolution des",
+        "règles proposée dans le bloc EVOLUTIONS doit s'appuyer sur ces nombres,",
+        "et sur rien d'autre.",
+        "",
+    ]
+
+    if not archives:
+        lignes += [
+            "---",
+            "",
+            "Aucun bilan archivé pour l'instant. Le premier run produira le premier",
+            "bilan.",
+            "",
+            "Tant que ce fichier est vide, aucune évolution des règles n'est justifiable :",
+            "il n'y a pas de données sur lesquelles l'appuyer.",
+        ]
+        return "\n".join(lignes).rstrip() + "\n"
+
+    for rang in sorted(set(list(cumul) + list(reference))):
+        entree = cumul.get(
+            rang, {"intitule": f"{rang}.", "retenus": 0, "vides": 0, "sources": {}}
+        )
+        productives = sorted(
+            entree["sources"].items(), key=lambda kv: (-kv[1], kv[0])
+        )
+        vues = {_normaliser_source(nom) for nom in entree["sources"]}
+        jamais = [
+            nom
+            for nom in reference.get(rang, [])
+            if not any(
+                _normaliser_source(nom) in vue or vue in _normaliser_source(nom)
+                for vue in vues
+                if vue
+            )
+        ]
+
+        lignes += [
+            "---",
+            "",
+            f"## {entree['intitule']}",
+            "",
+            f"- Sujets retenus depuis le début : **{entree['retenus']}**",
+            f"- Runs où le domaine n'a rien donné : **{entree['vides']}** sur {nb_runs}",
+        ]
+        if productives:
+            detail = ", ".join(
+                f"{nom} ({nb} run{'s' if nb > 1 else ''})" for nom, nb in productives
+            )
+            lignes.append(f"- Sources les plus productives : {detail}")
+        else:
+            lignes.append("- Sources les plus productives : aucune à ce jour")
+        if jamais:
+            lignes.append(
+                "- Sources de référence jamais productives : " + ", ".join(jamais)
+            )
+        else:
+            lignes.append(
+                "- Sources de référence jamais productives : aucune, toutes ont "
+                "produit au moins une fois"
+            )
+        lignes.append("")
+
+    return "\n".join(lignes).rstrip() + "\n"
 
 
 # --------------------------------------------------------------------------- écriture
@@ -408,19 +793,32 @@ def main() -> int:
 
     verifier_empreintes(scelles, "après l'appel au modèle")
 
-    rapport, suivis, bloc_corrections = decouper_blocs(reponse)
-    corrections = analyser_corrections(bloc_corrections, rapport_du_jour)
+    blocs = decouper_blocs(reponse)
+    corrections = analyser_corrections(blocs["CORRECTIONS"], rapport_du_jour)
+    fiches = analyser_bilan(blocs["BILAN"])
+    print(f"Bilan analysé : {len(fiches)} domaines.", file=sys.stderr)
 
     # À partir d'ici, tout est validé : on écrit.
     duree = time.monotonic() - depart
     rapport_du_jour.write_text(
-        en_tete(date_du_jour, heure_utc, duree, recherches) + rapport + "\n",
+        en_tete(date_du_jour, heure_utc, duree, recherches) + blocs["RAPPORT"] + "\n",
         encoding="utf-8",
     )
     print(f"Écrit : rapports/{date_du_jour}.md", file=sys.stderr)
 
-    SUJETS_SUIVIS.write_text(suivis + "\n", encoding="utf-8")
+    SUJETS_SUIVIS.write_text(blocs["SUJETS-SUIVIS"] + "\n", encoding="utf-8")
     print("Écrit : etat/sujets-suivis.md", file=sys.stderr)
+
+    BILANS.mkdir(parents=True, exist_ok=True)
+    (BILANS / f"{date_du_jour}.md").write_text(
+        rendre_bilan(fiches, date_du_jour, recherches), encoding="utf-8"
+    )
+    print(f"Écrit : etat/bilans/{date_du_jour}.md", file=sys.stderr)
+
+    # performance.md est recalculé de zéro à partir de tous les bilans archivés,
+    # celui du jour compris : c'est une vue dérivée, jamais une accumulation.
+    PERFORMANCE.write_text(rendre_performance(bilans_archives()), encoding="utf-8")
+    print("Écrit : etat/performance.md", file=sys.stderr)
 
     for chemin, encart in corrections:
         nom = chemin.relative_to(RACINE)

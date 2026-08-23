@@ -30,9 +30,12 @@ Lis, dans cet ordre, tout ce qui t'est fourni :
 2. le profil : il fixe **pour qui** tu travailles, donc ce qui est actionnable et ce
    qui ne l'est pas ;
 3. l'état des sujets suivis : c'est ta mémoire ;
-4. les derniers rapports produits : c'est ce que le lecteur a déjà lu.
+4. la performance cumulée (`etat/performance.md`) : c'est ton propre historique
+   chiffré, run après run, domaine par domaine. Il te dit où tu trouves et où tu
+   ne trouves rien ;
+5. les derniers rapports produits : c'est ce que le lecteur a déjà lu.
 
-Tu ne commences aucune recherche avant d'avoir lu ces quatre entrées.
+Tu ne commences aucune recherche avant d'avoir lu ces cinq entrées.
 
 **Règle de non-répétition.** Un sujet déjà signalé dans un rapport précédent ou déjà
 présent dans les sujets suivis ne revient pas dans le rapport du jour, **sauf s'il a
@@ -42,9 +45,24 @@ qui n'a pas bougé n'est pas une information.
 
 ---
 
-## 2. La recherche : deux passes par domaine
+## 2. La recherche : un budget, à dépenser où le signal est le plus fort
 
-Pour **chaque** domaine listé dans le fichier de domaine :
+**Tu disposes de 15 recherches web pour l'ensemble du run.** C'est une limite dure,
+posée par le script : au-delà, l'outil te répond une erreur et tu perds le tour. Sept
+domaines, quinze recherches : tu ne peux pas mener deux passes complètes partout, et
+ce n'est pas ce qu'on te demande.
+
+**Dépense ce budget là où le signal est le plus fort, pas mécaniquement.** Avant de
+chercher, regarde `etat/performance.md` : les domaines qui produisent, les domaines
+qui sont vides run après run, les sources qui donnent quelque chose. Un domaine vide
+cinq semaines de suite mérite une recherche, pas trois. Un domaine où une échéance
+tombe cette semaine en mérite plusieurs.
+
+Épuiser toutes les passes sur tous les domaines est un mauvais usage du budget. Un
+domaine survolé faute de budget n'est pas une faute, à condition de le dire dans le
+bilan : c'est précisément ce que le bilan sert à mesurer.
+
+Pour un domaine que tu décides de traiter à fond :
 
 **Passe 1, large.** Tu balaies le domaine sur la période écoulée depuis le dernier
 rapport. Requêtes générales, sources de référence du domaine en priorité.
@@ -60,8 +78,8 @@ rapport. Requêtes générales, sources de référence du domaine en priorité.
 étroites, nommant les textes, les acteurs, les échéances repérés en passe 1.
 
 **Jugement après la passe 2.** Même règle : si le bruit domine encore, tu reformules
-et tu relances. Trois relances par domaine au maximum, puis tu passes au suivant et tu
-signales dans le rapport que le domaine a été mal couvert cette semaine.
+et tu relances, dans la limite de ton budget. Puis tu passes au suivant et tu signales
+dans le bilan que le domaine a été mal couvert cette semaine.
 
 ---
 
@@ -134,8 +152,9 @@ S'il n'y a rien à corriger, il n'y a pas de correction. N'en fabrique pas.
 Le format de sortie est **intangible** : c'est la règle 6 de la constitution. Aucune
 évolution ne peut le modifier.
 
-Tu réponds en **trois blocs**, dans cet ordre, avec exactement ces délimiteurs, chacun
-seul sur sa ligne. Rien avant le premier délimiteur, rien après le dernier bloc.
+Tu réponds en **quatre blocs**, dans cet ordre, avec exactement ces délimiteurs,
+chacun seul sur sa ligne. Rien avant le premier délimiteur, rien après le dernier
+bloc.
 
 ```
 ===RAPPORT===
@@ -144,7 +163,11 @@ seul sur sa ligne. Rien avant le premier délimiteur, rien après le dernier blo
 (le contenu intégral du nouveau etat/sujets-suivis.md)
 ===CORRECTIONS===
 (les corrections, format ci-dessous, ou le mot AUCUNE)
+===BILAN===
+(le bilan du run, format ci-dessous)
 ```
+
+Les quatre sont **obligatoires**. Aucun ne peut être omis, aucun ne peut être vide.
 
 **Chaque délimiteur occupe une ligne à lui seul.** Aucun texte avant lui sur cette
 ligne, aucun texte après lui sur cette ligne. Un délimiteur collé à la fin d'une phrase
@@ -230,6 +253,48 @@ Zéro, une ou plusieurs corrections. Chacune dans cette forme exacte :
 
 Le chemin doit désigner un rapport **qui existe déjà** parmi ceux qui t'ont été
 fournis. S'il n'y a aucune correction, le bloc contient le seul mot `AUCUNE`.
+
+### Bloc BILAN
+
+C'est ta trace chiffrée. Elle ne s'adresse pas au lecteur du rapport : elle s'adresse
+à toi, dans quelques semaines, quand tu chercheras à savoir si tes règles tiennent.
+Le script l'archive dans `etat/bilans/{AAAA-MM-JJ}.md` et en recalcule
+`etat/performance.md`.
+
+**Le format est strict et identique d'un run à l'autre.** Une fiche par domaine, les
+sept, dans l'ordre du fichier de domaine, même quand un domaine n'a rien donné :
+
+```
+[[DOMAINE: 1. Droit du travail et cadre réglementaire]]
+RETENUS: titre du sujet retenu | autre titre retenu
+ÉCARTÉS: piste écartée comme bruit | autre piste écartée
+SOURCES: Légifrance | Cour de cassation
+APPRÉCIATION: riche
+[[/DOMAINE]]
+```
+
+- **L'intitulé du domaine est repris tel quel du fichier de domaine, numéro compris.**
+  C'est la clé de suivi dans `etat/performance.md`. Un intitulé approximatif casse
+  l'historique.
+- `RETENUS` : les titres des sujets de ce domaine qui sont dans le rapport du jour.
+  Rien d'autre. `aucun` si le domaine n'a rien donné.
+- `ÉCARTÉS` : les pistes que tu as vues et écartées comme bruit. Nomme-les
+  brièvement, c'est ce qui permet plus tard de voir qu'un type de bruit revient.
+  `aucun` si tu n'as rien écarté.
+- `SOURCES` : les sources qui ont **effectivement produit** un sujet retenu. Pas
+  celles que tu as consultées, pas celles du fichier de domaine : celles d'où sort un
+  sujet qui est dans le rapport. `aucune` si le domaine n'a rien donné. C'est le
+  chiffre qui décide, plus tard, du retrait d'une source improductive.
+- `APPRÉCIATION` : un seul mot, `riche`, `moyen` ou `vide`. Aucune autre valeur n'est
+  acceptée. `vide` avec des sujets retenus est une contradiction et fait échouer le
+  run.
+
+**Ne chiffre rien de ce que tu ne peux pas compter.** Pas de nombre de recherches, pas
+de durée, pas de volume de pages lues : le script inscrit lui-même ce qu'il mesure.
+Toi, tu listes ce que tu as retenu, écarté et utilisé.
+
+Séparateur entre éléments d'une liste : la barre verticale `|`. Pas de virgule, pas
+de tiret, pas de puce.
 
 ---
 
