@@ -1,8 +1,16 @@
-# Profil — la personne servie par cette veille
+# Profil : la personne servie par cette veille
 
-> ⚠️ **Première version, à relire.** Rédigée sur hypothèse à partir d'éléments connus.
-> Vérifie et corrige : la qualité du bloc « Ce que tu peux en faire cette semaine »
-> dépend entièrement de la précision de ce fichier.
+> **STATUT : FICHIER NON MODIFIABLE PAR L'AGENT.**
+> Ce fichier décrit une personne réelle. Il n'appartient pas à l'agent. Seul
+> l'humain qui supervise la veille le modifie, à la main, hors run.
+> L'agent ne le réécrit pas, ne propose pas de le réécrire, et ne produit aucune
+> évolution qui le vise. Le script vérifie son empreinte SHA-256 avant et après
+> chaque run : toute modification fait échouer le run, comme pour
+> `constitution.md`.
+>
+> ⚠️ **Première version, à relire.** Rédigée sur hypothèse à partir d'éléments
+> connus. Vérifie et corrige : la qualité du bloc « Ce que tu peux en faire cette
+> semaine » dépend entièrement de la précision de ce fichier.
 
 ## Qui
 
@@ -34,7 +42,7 @@ Par ordre d'usage réel :
 ## Ce qu'il ne fait pas
 
 - Il ne gère pas de paie, pas de contrat, pas de contentieux. Une note technique
-  destinée à un gestionnaire de paie ne lui sert à rien telle quelle — sauf si elle
+  destinée à un gestionnaire de paie ne lui sert à rien telle quelle, sauf si elle
   éclaire un enjeu qu'il enseigne.
 - Il n'est pas DRH et ne pilote pas d'effectif. Les sujets purement opérationnels de
   gestion d'équipe ne l'intéressent que comme matière pédagogique.

@@ -1,8 +1,19 @@
-# Domaine — Ressources humaines (périmètre France / Union européenne)
+# Domaine : ressources humaines (périmètre France / Union européenne)
 
-> ⚠️ **Première version, à relire.** Ce fichier a été rédigé sur hypothèse. Les sept
-> domaines, les sources et la liste de bruit sont plausibles mais non validés. Corrige
-> librement : c'est ce fichier qu'on modifie pour changer de secteur, jamais le moteur.
+> **STATUT : FICHIER MODIFIABLE PAR L'AGENT.**
+> Avec `moteur.md`, ce fichier fait partie des deux seuls que l'agent est autorisé
+> à réécrire lui-même. Il peut réordonner les domaines, ajouter ou retirer une
+> source, ajuster la liste du bruit, modifier un critère d'arbitrage, à condition
+> de le justifier par les chiffres de `etat/performance.md` et de l'archiver dans
+> `evolutions/`.
+>
+> Ce qu'il ne peut pas faire : ajouter ou supprimer un domaine, changer leur
+> nombre, ni toucher à la structure de ce fichier. Les sept intitulés numérotés
+> servent de clé de suivi dans `etat/performance.md` : ils sont stables.
+>
+> ⚠️ **Première version, à relire.** Les sept domaines, les sources et la liste de
+> bruit ont été rédigés sur hypothèse. Corrige librement : c'est ce fichier qu'on
+> modifie pour changer de secteur, jamais le moteur.
 
 Périmètre géographique : France en priorité, Union européenne quand un texte européen
 produit des effets en droit français. Le reste du monde n'entre que si un acteur
@@ -93,7 +104,7 @@ supérieur · France Travail.
 - Les tribunes d'opinion sans fait nouveau, y compris signées par des noms connus.
 - Les posts LinkedIn et contenus repris sans source primaire identifiable.
 - Les néologismes managériaux et leur commentaire : quiet quitting, quiet hiring,
-  grande démission, et toute étiquette du même genre — sauf données de mesure sérieuses.
+  grande démission, et toute étiquette du même genre, sauf données de mesure sérieuses.
 - Les sondages à faible effectif, sans méthodologie publiée ou sans marge d'erreur.
 - Les reprises d'un même communiqué par plusieurs médias : compte pour un seul sujet, et
   remonte à la source.

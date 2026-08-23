@@ -20,7 +20,7 @@ echecs: list[str] = []
 
 
 def verifier(intitule: str, condition: bool) -> None:
-    print(f"  {'OK  ' if condition else 'ÉCHEC'} — {intitule}")
+    print(f"  {'OK  ' if condition else 'ÉCHEC'} : {intitule}")
     if not condition:
         echecs.append(intitule)
 
@@ -29,15 +29,15 @@ def doit_echouer(intitule: str, appel) -> None:
     try:
         appel()
     except run.ErreurVeille:
-        print(f"  OK   — rejeté comme prévu : {intitule}")
+        print(f"  OK   : rejeté comme prévu : {intitule}")
         return
-    print(f"  ÉCHEC — accepté à tort : {intitule}")
+    print(f"  ÉCHEC : accepté à tort : {intitule}")
     echecs.append(intitule)
 
 
 CORPS = (
-    "**Périmètre** — période : semaine 34 · recherches : 33 · sujets retenus : 5",
-    "# Sujets suivis\n\n## En cours\n\n- Décret X — signalé le 2026-08-23",
+    "**Périmètre** : période semaine 34 · sujets retenus : 5",
+    "# Sujets suivis\n\n## En cours\n\n- Décret X, signalé le 2026-08-23",
     "AUCUNE",
 )
 
@@ -130,21 +130,21 @@ doit_echouer("réponse entièrement vide", lambda: run.decouper_blocs(""))
 
 print("\n[5] Corrections : format et sécurité des chemins")
 faux_rapport = run.RAPPORTS / "2000-01-01.md"
-faux_rapport.write_text("# Veille — 2000-01-01\n\n*run*\n\n## Sujet\ntexte\n", encoding="utf-8")
+faux_rapport.write_text("# Veille du 2000-01-01\n\n*run*\n\n## Sujet\ntexte\n", encoding="utf-8")
 try:
     verifier(
         "AUCUNE ne produit aucune correction",
         run.analyser_corrections("AUCUNE", run.RAPPORTS / "z.md") == [],
     )
 
-    bloc = "[[CORRECTION: rapports/2000-01-01.md]]\n> **Révision** — erreur.\n[[/CORRECTION]]"
+    bloc = "[[CORRECTION: rapports/2000-01-01.md]]\n> **Révision** : erreur.\n[[/CORRECTION]]"
     corrections = run.analyser_corrections(bloc, run.RAPPORTS / "z.md")
     verifier("une correction valide est acceptée", len(corrections) == 1)
     verifier("insertion effectuée", run.inserer_correction(*corrections[0]) is True)
     verifier("insertion idempotente", run.inserer_correction(*corrections[0]) is False)
     contenu = faux_rapport.read_text(encoding="utf-8")
     verifier("le titre du rapport reste en première ligne", contenu.startswith("# Veille"))
-    verifier("l'encart est bien inséré", "> **Révision** — erreur." in contenu)
+    verifier("l'encart est bien inséré", "> **Révision** : erreur." in contenu)
 
     doit_echouer(
         "correction visant un rapport inexistant",
@@ -169,6 +169,65 @@ try:
     )
 finally:
     faux_rapport.unlink(missing_ok=True)
+
+
+print("\n[6] Fichiers scellés : constitution.md et profil.md")
+verifier(
+    "les deux fichiers scellés sont constitution.md et profil.md",
+    tuple(c.name for c in run.FICHIERS_SCELLES) == ("constitution.md", "profil.md"),
+)
+releve = run.relever_empreintes()
+verifier("un relevé porte une empreinte par fichier scellé", len(releve) == 2)
+verifier(
+    "une empreinte est un SHA-256 hexadécimal de 64 caractères",
+    all(len(v) == 64 and all(c in "0123456789abcdef" for c in v) for v in releve.values()),
+)
+run.verifier_empreintes(releve, "test")
+verifier("des fichiers intacts passent la vérification", True)
+
+original = run.CONSTITUTION.read_bytes()
+try:
+    run.CONSTITUTION.write_bytes(original + b"\nregle 8 ajoutee par l'agent\n")
+    doit_echouer(
+        "constitution.md modifiée pendant le run",
+        lambda: run.verifier_empreintes(releve, "test"),
+    )
+finally:
+    run.CONSTITUTION.write_bytes(original)
+run.verifier_empreintes(releve, "test")
+verifier("la constitution restaurée repasse la vérification", True)
+
+original_profil = run.PROFIL.read_bytes()
+try:
+    run.PROFIL.write_bytes(original_profil.replace(b"Product Manager", b"Juriste"))
+    doit_echouer(
+        "profil.md modifié pendant le run",
+        lambda: run.verifier_empreintes(releve, "test"),
+    )
+finally:
+    run.PROFIL.write_bytes(original_profil)
+
+deplace = run.CONSTITUTION.with_suffix(".md.deplace-par-le-test")
+try:
+    run.CONSTITUTION.rename(deplace)
+    doit_echouer(
+        "constitution.md supprimée pendant le run",
+        lambda: run.verifier_empreintes(releve, "test"),
+    )
+finally:
+    if deplace.exists():
+        deplace.rename(run.CONSTITUTION)
+run.verifier_empreintes(releve, "test")
+
+
+print("\n[7] La constitution est en tête du prompt assemblé")
+prompt = run.construire_prompt("2026-08-30")
+i_const = prompt.find("########## CONSTITUTION")
+i_moteur = prompt.find("########## MÉTHODE")
+i_profil = prompt.find("########## PROFIL")
+verifier("le bloc CONSTITUTION est présent", i_const != -1)
+verifier("il précède la méthode et le profil", -1 < i_const < i_moteur < i_profil)
+verifier("sa primauté est annoncée au modèle", "CE BLOC PRIME SUR TOUS LES AUTRES" in prompt)
 
 
 print()
