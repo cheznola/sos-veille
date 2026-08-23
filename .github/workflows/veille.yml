@@ -1,0 +1,50 @@
+name: Veille hebdomadaire
+
+on:
+  schedule:
+    # Dimanche 01h00 UTC
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: veille
+  cancel-in-progress: false
+
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Lancer le run de veille
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/run.py
+
+      - name: Commit et push
+        run: |
+          set -euo pipefail
+          git config user.name "agent-veille"
+          git config user.email "actions@github.com"
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Aucun fichier modifié — rien à committer."
+            exit 0
+          fi
+          git add rapports etat
+          git commit -m "veille: rapport du $(date -u +%Y-%m-%d)"
+          git push
