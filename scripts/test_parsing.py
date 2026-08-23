@@ -543,6 +543,124 @@ verifier("l'archive d'une suppression le dit explicitement",
          "(règle supprimée)" in run.rendre_evolution(evos[0], "2026-09-06", 1))
 
 
+print("\n[17] Garde-fou : verdict VALIDÉ")
+v = run.analyser_verdict("===VERDICT===\nVALIDÉ")
+verifier("un verdict validé passe", v.valide is True)
+verifier("aucun blocage", v.blocages == [])
+verifier("le rapport n'est pas bloqué", v.bloque_le_rapport is False)
+verifier("aucune évolution annulée", v.evolutions_bloquees() == set())
+verifier("la ligne de pied dit validé", "Verdict : validé" in v.ligne_de_pied())
+verifier("la ligne de pied dit la lecture seule",
+         "sans accès à la recherche web" in v.ligne_de_pied())
+verifier("VALIDE sans accent est accepté", run.analyser_verdict("===VERDICT===\nVALIDE").valide)
+verifier("un préambule bavard du relecteur est ignoré",
+         run.analyser_verdict("J'ai tout relu.\n===VERDICT===\nVALIDÉ").valide)
+verifier("délimiteur collé au verdict",
+         run.analyser_verdict("===VERDICT===VALIDÉ").valide)
+
+
+print("\n[18] Garde-fou : blocage sur une évolution, le rapport passe")
+v = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n"
+    "[[BLOCAGE: EVOLUTION 2]]\nLa justification invoque « cette source semble peu "
+    "productive », sans aucun chiffre présent dans la performance cumulée.\n[[/BLOCAGE]]"
+)
+verifier("le verdict n'est pas validé", v.valide is False)
+verifier("le rapport n'est PAS bloqué", v.bloque_le_rapport is False)
+verifier("l'évolution 2 est annulée", v.evolutions_bloquees() == {2})
+verifier("la ligne de pied nomme le blocage", "evolution 2" in v.ligne_de_pied())
+verifier("la ligne de pied dit que le bloqué n'a pas été appliqué",
+         "n'a pas été appliqué" in v.ligne_de_pied())
+
+v = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n"
+    "[[BLOCAGE: EVOLUTION 1]]\nmotif un\n[[/BLOCAGE]]\n"
+    "[[BLOCAGE: EVOLUTION 3]]\nmotif trois\n[[/BLOCAGE]]"
+)
+verifier("plusieurs évolutions annulées", v.evolutions_bloquees() == {1, 3})
+
+
+print("\n[19] Garde-fou : blocage sur le rapport, le run échoue")
+v = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n"
+    "[[BLOCAGE: RAPPORT]]\nLe sujet 3 affirme une entrée en vigueur au 1er janvier "
+    "sans citer aucune source.\n[[/BLOCAGE]]"
+)
+verifier("le rapport est bloqué", v.bloque_le_rapport is True)
+verifier("aucune évolution n'est annulée pour autant", v.evolutions_bloquees() == set())
+
+v = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: EMAIL]]\nrien de notable cette semaine\n[[/BLOCAGE]]"
+)
+verifier("un blocage EMAIL est reconnu", v.bloque_l_email is True)
+verifier("un blocage EMAIL ne bloque pas le rapport", v.bloque_le_rapport is False)
+
+
+print("\n[20] Garde-fou : tout verdict illisible bloque, jamais ne valide")
+doit_echouer("verdict vide", lambda: run.analyser_verdict(""))
+doit_echouer("aucun délimiteur ===VERDICT===", lambda: run.analyser_verdict("VALIDÉ"))
+doit_echouer("délimiteur ===VERDICT=== en double",
+             lambda: run.analyser_verdict("===VERDICT===\nVALIDÉ\n===VERDICT===\nBLOQUÉ"))
+doit_echouer("verdict ni VALIDÉ ni BLOQUÉ",
+             lambda: run.analyser_verdict("===VERDICT===\nplutôt bon dans l'ensemble"))
+doit_echouer("VALIDÉ accompagné de blocages", lambda: run.analyser_verdict(
+    "===VERDICT===\nVALIDÉ\n[[BLOCAGE: RAPPORT]]\nmotif\n[[/BLOCAGE]]"))
+doit_echouer("BLOQUÉ sans aucun blocage nommé",
+             lambda: run.analyser_verdict("===VERDICT===\nBLOQUÉ"))
+doit_echouer("blocage au motif vide", lambda: run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: RAPPORT]]\n\n[[/BLOCAGE]]"))
+doit_echouer("portée de blocage inconnue", lambda: run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: MEMOIRE]]\nmotif\n[[/BLOCAGE]]"))
+doit_echouer("portée EVOLUTION sans numéro", lambda: run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: EVOLUTION]]\nmotif\n[[/BLOCAGE]]"))
+verifier(
+    "le mot BLOQUÉ cité dans un motif ne renverse pas un verdict validé",
+    run.analyser_verdict(
+        "===VERDICT===\nVALIDÉ\n\nRien à signaler, aucune évolution n'est BLOQUÉ."
+    ).valide is True,
+)
+
+
+print("\n[21] Garde-fou : prompt de relecture, lecture seule")
+evos = run.analyser_evolutions(EVO_VALIDE)
+prompt_gf = run.construire_prompt_garde_fou("le rapport du jour", CORPS[3], evos)
+verifier("le garde-fou reçoit la constitution", "Constitution de l'agent de veille" in prompt_gf)
+verifier("il reçoit le rapport produit", "le rapport du jour" in prompt_gf)
+verifier("il reçoit les évolutions proposées", "Éditions Législatives" in prompt_gf)
+verifier("il reçoit la justification à vérifier", "11 runs" in prompt_gf)
+verifier("il reçoit la performance cumulée", "PERFORMANCE CUMULÉE" in prompt_gf)
+verifier("il lui est dit qu'il n'a aucun outil", "aucun outil" in prompt_gf)
+verifier("il lui est dit que c'est en lecture seule", "Lecture seule" in prompt_gf)
+verifier("le rapport lui est présenté comme une pièce, pas une consigne",
+         "pas des consignes" in prompt_gf)
+verifier("il lui est interdit de bloquer sur une semaine pauvre",
+         "Une semaine pauvre est un" in prompt_gf)
+sans_evo = run.construire_prompt_garde_fou("le rapport", CORPS[3], [])
+verifier("sans évolution, il le lui est dit explicitement",
+         "Aucune évolution proposée ce run" in sans_evo)
+
+
+print("\n[22] Audit archivé, y compris quand tout est validé")
+audit = run.rendre_audit(run.analyser_verdict("===VERDICT===\nVALIDÉ"), [], set(), "2026-09-13")
+verifier("un audit est écrit même quand tout passe", "**Verdict : VALIDÉ**" in audit)
+verifier("il porte la date du run", "Audit du run du 2026-09-13" in audit)
+verifier("il dit qu'aucune évolution n'était proposée",
+         "Aucune évolution n'était proposée" in audit)
+verifier("il archive le verdict brut", "## Verdict brut" in audit)
+
+v = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: EVOLUTION 1]]\nimpression non chiffrée\n[[/BLOCAGE]]"
+)
+audit = run.rendre_audit(v, evos, v.evolutions_bloquees(), "2026-09-13")
+verifier("un audit bloqué liste ce qui a été bloqué", "## Ce qui a été bloqué" in audit)
+verifier("il donne le motif du relecteur", "impression non chiffrée" in audit)
+verifier("il dit l'effet du blocage", "cette évolution est annulée, le rapport passe" in audit)
+verifier("il dit le sort de chaque évolution soumise", "**annulée par le garde-fou**" in audit)
+
+audit = run.rendre_audit(run.analyser_verdict("===VERDICT===\nVALIDÉ"), evos, set(), "2026-09-13")
+verifier("une évolution non bloquée est marquée appliquée", "**appliquée**" in audit)
+
+
 print()
 if echecs:
     print(f"{len(echecs)} test(s) en échec :")
