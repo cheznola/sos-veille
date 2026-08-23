@@ -7,7 +7,10 @@ Usage : python scripts/test_parsing.py
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
+import urllib.error
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -659,6 +662,263 @@ verifier("il dit le sort de chaque évolution soumise", "**annulée par le garde
 
 audit = run.rendre_audit(run.analyser_verdict("===VERDICT===\nVALIDÉ"), evos, set(), "2026-09-13")
 verifier("une évolution non bloquée est marquée appliquée", "**appliquée**" in audit)
+
+
+print("\n[23] Bloc EMAIL : optionnel, et dernier de l'ordre imposé")
+verifier("EMAIL est déclaré optionnel", "===EMAIL===" in run.MARQUEURS_OPTIONNELS)
+verifier(
+    "l'ordre complet est RAPPORT, SUJETS-SUIVIS, CORRECTIONS, BILAN, EVOLUTIONS, EMAIL",
+    run.MARQUEURS == ("===RAPPORT===", "===SUJETS-SUIVIS===", "===CORRECTIONS===",
+                      "===BILAN===", "===EVOLUTIONS===", "===EMAIL==="),
+)
+BLOC_EMAIL = (
+    "OBJET: Le décret sur les congés payés est paru\n"
+    "CORPS:\n"
+    "Le texte que je suivais depuis le 2 août est paru au Journal officiel."
+)
+complet = bien_formee() + "\n===EVOLUTIONS===\n" + EVO_VALIDE + "\n===EMAIL===\n" + BLOC_EMAIL
+d = run.decouper_blocs(complet)
+verifier("les six blocs sont extraits", len(d) == 6)
+verifier("le bloc EMAIL est extrait", d["EMAIL"] == BLOC_EMAIL)
+verifier("les quatre obligatoires restent intacts",
+         (d["RAPPORT"], d["SUJETS-SUIVIS"], d["CORRECTIONS"], d["BILAN"]) == CORPS)
+
+sans_evo = bien_formee() + "\n===EMAIL===\n" + BLOC_EMAIL
+d = run.decouper_blocs(sans_evo)
+verifier("EMAIL seul, sans EVOLUTIONS, est accepté", d["EMAIL"] == BLOC_EMAIL)
+verifier("EVOLUTIONS reste absent", "EVOLUTIONS" not in d)
+
+doit_echouer("EMAIL présent mais vide",
+             lambda: run.decouper_blocs(bien_formee() + "\n===EMAIL===\n"))
+doit_echouer("EMAIL placé avant EVOLUTIONS", lambda: run.decouper_blocs(
+    bien_formee() + "\n===EMAIL===\n" + BLOC_EMAIL + "\n===EVOLUTIONS===\n" + EVO_VALIDE))
+doit_echouer("EMAIL placé avant BILAN", lambda: run.decouper_blocs(
+    f"===RAPPORT===\n{CORPS[0]}\n===SUJETS-SUIVIS===\n{CORPS[1]}\n"
+    f"===CORRECTIONS===\n{CORPS[2]}\n===EMAIL===\n{BLOC_EMAIL}\n===BILAN===\n{CORPS[3]}"))
+doit_echouer("EMAIL en double",
+             lambda: run.decouper_blocs(sans_evo + "\n===EMAIL===\nautre"))
+
+
+print("\n[24] Composition du message")
+objet, corps = run.analyser_email(BLOC_EMAIL)
+verifier("l'objet est extrait", objet == "Le décret sur les congés payés est paru")
+verifier("le corps est extrait", corps.startswith("Le texte que je suivais"))
+verifier("le mot-clé CORPS n'est pas recopié", "CORPS:" not in corps)
+objet2, corps2 = run.analyser_email("OBJET: Un objet\n\nUn corps sans mot-clé CORPS.")
+verifier("le mot-clé CORPS est facultatif", corps2 == "Un corps sans mot-clé CORPS.")
+
+message = run.composer_message(corps, "2026-09-20", "01:07")
+verifier("le corps de l'agent est conservé", "Le texte que je suivais" in message)
+verifier("le script signe comme agent de veille", "Agent de veille RH" in message)
+verifier("le script inscrit l'heure du run", "2026-09-20 à 01:07 UTC" in message)
+verifier("le script renvoie vers le site public",
+         "https://veillerh.emmanueldimarco.fr" in message)
+verifier("le message dit qu'il a été relu avant envoi", "relu par un second agent" in message)
+
+
+print("\n[25] Bloc EMAIL mal formé : incident, jamais échec du run")
+for mauvais, intitule in (
+    ("un message sans ligne OBJET", "bloc EMAIL sans ligne OBJET"),
+    ("OBJET:   \nCORPS:\ndu texte", "objet vide"),
+    ("OBJET: un objet\nCORPS:\n   ", "corps vide"),
+    ("OBJET: un objet\nCORPS:\nécrivez-moi à contact@exemple.fr", "adresse email en clair dans le corps"),
+    ("OBJET: réponse à jean@exemple.fr\nCORPS:\ndu texte", "adresse email en clair dans l'objet"),
+):
+    try:
+        run.analyser_email(mauvais)
+        print(f"  ÉCHEC : accepté à tort : {intitule}")
+        echecs.append(intitule)
+    except run.IncidentEmail:
+        print(f"  OK   : incident non bloquant : {intitule}")
+    except run.ErreurVeille:
+        print(f"  ÉCHEC : {intitule} fait échouer le run au lieu de journaliser")
+        echecs.append(intitule)
+
+
+print("\n[26] abonnes.md : absent, vide ou commenté vaut aucun envoi")
+sauvegarde = run.ABONNES.read_bytes() if run.ABONNES.is_file() else None
+try:
+    verifier("le fichier livré ne contient aucune adresse", run.lire_abonnes() == [])
+
+    run.ABONNES.unlink(missing_ok=True)
+    verifier("fichier absent : liste vide, aucune erreur", run.lire_abonnes() == [])
+
+    run.ABONNES.write_text("", encoding="utf-8")
+    verifier("fichier vide : liste vide", run.lire_abonnes() == [])
+
+    run.ABONNES.write_text(
+        "# Abonnés\n> note : ne pas mettre admin@exemple.fr ici\n"
+        "<!-- - commentaire@exemple.fr -->\n\n"
+        "- premiere@exemple.fr\n- Deuxieme@Exemple.FR\n"
+        "- premiere@exemple.fr\ntroisieme@exemple.fr\n",
+        encoding="utf-8",
+    )
+    lus = run.lire_abonnes()
+    verifier("les titres et citations sont ignorés", "admin@exemple.fr" not in lus)
+    verifier("les commentaires HTML sont ignorés", "commentaire@exemple.fr" not in lus)
+    verifier("les adresses sont lues", "premiere@exemple.fr" in lus)
+    verifier("une adresse sans tiret est lue aussi", "troisieme@exemple.fr" in lus)
+    verifier("les doublons sont écartés, casse comprise", len(lus) == 3)
+finally:
+    if sauvegarde is None:
+        run.ABONNES.unlink(missing_ok=True)
+    else:
+        run.ABONNES.write_bytes(sauvegarde)
+
+
+print("\n[27] Envoi : plafond, clé absente, et toutes les erreurs Resend")
+verifier("plafond dur d'un email par run", run.PLAFOND_EMAILS_PAR_RUN == 1)
+verifier("expéditeur conforme",
+         "agentveillerh@emmanueldimarco.fr" in run.RESEND_EXPEDITEUR)
+verifier("endpoint Resend conforme à la documentation",
+         run.RESEND_URL == "https://api.resend.com/emails")
+
+import os as _os
+cle_avant = _os.environ.pop("RESEND_API_KEY", None)
+try:
+    try:
+        run.envoyer_email("objet", "message", ["a@b.fr"])
+        print("  ÉCHEC : accepté à tort : clé absente")
+        echecs.append("clé absente")
+    except run.IncidentEmail as inc:
+        verifier("clé absente : incident non bloquant, message explicite",
+                 "RESEND_API_KEY absent" in str(inc))
+
+    _os.environ["RESEND_API_KEY"] = "cle-de-test-jamais-envoyee"
+    vrai_urlopen = run.urllib.request.urlopen
+
+    def faux(code, charge):
+        def _f(requete, timeout=None):
+            raise urllib.error.HTTPError(
+                run.RESEND_URL, code, "erreur", {}, io.BytesIO(json.dumps(charge).encode()))
+        return _f
+
+    scenarios = [
+        (403, {"message": "The emmanueldimarco.fr domain is not verified",
+               "name": "validation_error"}, "domaine non vérifié"),
+        (422, {"message": "domain_not_found", "name": "validation_error"}, "domaine introuvable"),
+        (401, {"message": "API key is invalid", "name": "validation_error"}, "clé invalide"),
+        (429, {"message": "Too many requests", "name": "rate_limit_exceeded"}, "quota dépassé"),
+        (500, {"message": "Internal error", "name": "internal_server_error"}, "panne Resend"),
+    ]
+    for code, charge, intitule in scenarios:
+        run.urllib.request.urlopen = faux(code, charge)
+        try:
+            run.envoyer_email("objet", "message", ["a@b.fr"])
+            print(f"  ÉCHEC : accepté à tort : {intitule}")
+            echecs.append(intitule)
+        except run.IncidentEmail:
+            print(f"  OK   : incident non bloquant : {intitule} (HTTP {code})")
+        except run.ErreurVeille:
+            print(f"  ÉCHEC : {intitule} fait échouer le run")
+            echecs.append(intitule)
+
+    def reseau_mort(requete, timeout=None):
+        raise urllib.error.URLError("réseau injoignable")
+    run.urllib.request.urlopen = reseau_mort
+    try:
+        run.envoyer_email("objet", "message", ["a@b.fr"])
+        print("  ÉCHEC : accepté à tort : réseau injoignable")
+        echecs.append("réseau injoignable")
+    except run.IncidentEmail:
+        print("  OK   : incident non bloquant : réseau injoignable")
+
+    envois = []
+
+    class FausseReponse:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return b'{"id": "4ef9a417-02e9-4d39-ad75-9611e0fcc33c"}'
+
+    def succes(requete, timeout=None):
+        envois.append(json.loads(requete.data.decode("utf-8")))
+        verifier("la clé passe en en-tête Bearer, jamais dans le corps",
+                 requete.headers.get("Authorization", "").startswith("Bearer "))
+        verifier("content-type json", requete.headers.get("Content-type") == "application/json")
+        verifier("clé d'idempotence posée", bool(requete.headers.get("Idempotency-key")))
+        return FausseReponse()
+
+    run.urllib.request.urlopen = succes
+    identifiant = run.envoyer_email("un objet", "un message", ["a@b.fr", "c@d.fr"])
+    verifier("l'identifiant Resend est rendu", identifiant.startswith("4ef9a417"))
+    verifier("un seul appel API, donc un seul email", len(envois) == 1)
+    verifier("les abonnés sont en copie cachée", envois[0]["bcc"] == ["a@b.fr", "c@d.fr"])
+    verifier("aucun abonné n'est destinataire visible", envois[0]["to"] == [run.RESEND_EXPEDITEUR])
+    verifier("objet et texte transmis",
+             envois[0]["subject"] == "un objet" and envois[0]["text"] == "un message")
+    verifier("la clé n'apparaît nulle part dans le corps envoyé",
+             "cle-de-test-jamais-envoyee" not in json.dumps(envois[0]))
+finally:
+    run.urllib.request.urlopen = vrai_urlopen
+    _os.environ.pop("RESEND_API_KEY", None)
+    if cle_avant is not None:
+        _os.environ["RESEND_API_KEY"] = cle_avant
+
+
+print("\n[28] traiter_email : ne lève jamais, archive toujours")
+VALIDE = run.analyser_verdict("===VERDICT===\nVALIDÉ")
+BLOQUE_EMAIL = run.analyser_verdict(
+    "===VERDICT===\nBLOQUÉ\n[[BLOCAGE: EMAIL]]\nSignal jugé non notable.\n[[/BLOCAGE]]")
+
+def archive_apres(bloc, verdict, jour="2026-09-27"):
+    fichier = run.EMAILS / f"{jour}.md"
+    fichier.unlink(missing_ok=True)
+    run.traiter_email(bloc, verdict, jour, "01:07")
+    contenu = fichier.read_text(encoding="utf-8") if fichier.is_file() else None
+    fichier.unlink(missing_ok=True)
+    return contenu
+
+verifier("aucun bloc EMAIL : rien n'est envoyé, rien n'est archivé",
+         archive_apres(None, VALIDE) is None)
+
+a = archive_apres(BLOC_EMAIL, BLOQUE_EMAIL)
+verifier("garde-fou bloquant : aucun envoi", "bloqué par le garde-fou" in a)
+verifier("le motif du garde-fou est archivé", "Signal jugé non notable" in a)
+
+sauvegarde = run.ABONNES.read_bytes() if run.ABONNES.is_file() else None
+try:
+    run.ABONNES.unlink(missing_ok=True)
+    a = archive_apres(BLOC_EMAIL, VALIDE)
+    verifier("abonnes.md absent : aucun envoi, incident archivé", "aucun abonné" in a)
+    verifier("ce n'est pas présenté comme une erreur", "Ce n'est pas une erreur" in a)
+
+    run.ABONNES.write_text("- abonne@exemple.fr\n", encoding="utf-8")
+    _os.environ.pop("RESEND_API_KEY", None)
+    a = archive_apres(BLOC_EMAIL, VALIDE)
+    verifier("clé absente : aucun envoi, run poursuivi", "RESEND_API_KEY absent" in a)
+    verifier("aucune adresse d'abonné dans l'archive", "abonne@exemple.fr" not in a)
+
+    a = archive_apres("un bloc EMAIL sans objet", VALIDE)
+    verifier("bloc mal formé : incident archivé, run poursuivi",
+             "ne porte pas de ligne" in a)
+
+    _os.environ["RESEND_API_KEY"] = "cle-de-test"
+    vrai_urlopen = run.urllib.request.urlopen
+    def explose(requete, timeout=None):
+        raise RuntimeError("panne totalement imprévue")
+    run.urllib.request.urlopen = explose
+    a = archive_apres(BLOC_EMAIL, VALIDE)
+    verifier("panne imprévue : capturée, archivée, run poursuivi",
+             "incident imprévu" in a and "panne totalement imprévue" in a)
+
+    run.urllib.request.urlopen = succes
+    envois.clear()
+    a = archive_apres(BLOC_EMAIL, VALIDE)
+    verifier("envoi réussi : archivé comme envoyé", "**Statut** : envoyé" in a)
+    verifier("le nombre de destinataires est archivé", "**Destinataires** : 1" in a)
+    verifier("aucune adresse d'abonné dans l'archive d'un envoi réussi",
+             "abonne@exemple.fr" not in a)
+    verifier("l'objet et le message sont archivés", "congés payés" in a)
+    verifier("un seul email a été envoyé", len(envois) == 1)
+finally:
+    run.urllib.request.urlopen = vrai_urlopen
+    _os.environ.pop("RESEND_API_KEY", None)
+    if cle_avant is not None:
+        _os.environ["RESEND_API_KEY"] = cle_avant
+    if sauvegarde is None:
+        run.ABONNES.unlink(missing_ok=True)
+    else:
+        run.ABONNES.write_bytes(sauvegarde)
 
 
 print()

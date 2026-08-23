@@ -11,11 +11,14 @@ Rien n'est écrit sur disque tant que la réponse n'a pas été entièrement val
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import sys
 import time
 import unicodedata
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -34,6 +37,8 @@ BILANS = ETAT / "bilans"
 RAPPORTS = RACINE / "rapports"
 EVOLUTIONS = RACINE / "evolutions"
 AUDITS = ETAT / "audits"
+EMAILS = ETAT / "emails"
+ABONNES = RACINE / "abonnes.md"
 
 # Fichiers que l'agent n'a pas le droit de toucher. Leur empreinte est relevée
 # avant l'appel au modèle et revérifiée après toutes les écritures.
@@ -66,12 +71,26 @@ MARQUEURS_OBLIGATOIRES = (
     "===CORRECTIONS===",
     "===BILAN===",
 )
-MARQUEURS_OPTIONNELS: tuple[str, ...] = ("===EVOLUTIONS===",)
+MARQUEURS_OPTIONNELS: tuple[str, ...] = ("===EVOLUTIONS===", "===EMAIL===")
 MARQUEURS = MARQUEURS_OBLIGATOIRES + MARQUEURS_OPTIONNELS
 MARQUEURS_OPTIONNELS_NOMS = tuple(m.strip("=") for m in MARQUEURS_OPTIONNELS)
 
 APPRECIATIONS = ("riche", "moyen", "vide")
 NB_DOMAINES = 7
+
+# ------------------------------------------------------------------- email
+# Envoi via l'API Resend. La clé vient du secret GitHub RESEND_API_KEY et
+# n'est jamais écrite nulle part : ni en clair dans le dépôt, ni dans un
+# journal, ni dans une archive d'envoi.
+RESEND_URL = "https://api.resend.com/emails"
+RESEND_EXPEDITEUR = "Agent de veille RH <agentveillerh@emmanueldimarco.fr>"
+RESEND_TIMEOUT = 20
+LIEN_PUBLIC = "https://veillerh.emmanueldimarco.fr"
+
+# Plafond dur : un email au maximum par run, quoi qu'il arrive.
+PLAFOND_EMAILS_PAR_RUN = 1
+
+MOTIF_ADRESSE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
 # Les deux seuls fichiers qu'une évolution peut viser. Tout autre chemin est
 # rejeté et fait échouer le run : règle 7 de la constitution.
@@ -1328,6 +1347,268 @@ def rendre_audit(
     return "\n".join(lignes).rstrip() + "\n"
 
 
+# --------------------------------------------------------------------- email
+#
+# Tout ce qui suit est DÉFENSIF. Aucune fonction de cette section ne lève
+# ErreurVeille : elles journalisent l'incident et rendent la main. Le rapport
+# est écrit et commité dans tous les cas. L'email est un bonus, jamais un
+# point de défaillance.
+
+
+class IncidentEmail(Exception):
+    """Un envoi n'a pas pu aboutir. Journalisé, jamais bloquant."""
+
+
+def lire_abonnes() -> list[str]:
+    """Les adresses de abonnes.md. Fichier absent ou vide : liste vide.
+
+    Les lignes de commentaire, de titre et de citation sont ignorées, pour que
+    les explications du fichier ne soient jamais prises pour des adresses.
+    """
+    if not ABONNES.is_file():
+        return []
+
+    # Les commentaires HTML sont retirés en entier, y compris sur plusieurs
+    # lignes : l'exemple d'adresse que porte le fichier livré ne doit jamais
+    # être pris pour un abonné réel.
+    texte = re.sub(r"<!--.*?-->", " ", ABONNES.read_text(encoding="utf-8"), flags=re.DOTALL)
+
+    adresses: list[str] = []
+    for ligne in texte.split("\n"):
+        nue = ligne.strip()
+        if not nue or nue.startswith(("#", ">")):
+            continue
+        for adresse in MOTIF_ADRESSE.findall(nue):
+            if adresse.lower() not in {a.lower() for a in adresses}:
+                adresses.append(adresse)
+    return adresses
+
+
+def analyser_email(bloc: str) -> tuple[str, str]:
+    """Extrait l'objet et le corps du bloc EMAIL.
+
+    Lève IncidentEmail, jamais ErreurVeille : un bloc EMAIL mal formé prive
+    d'envoi, il ne fait pas échouer le run.
+    """
+    trouve = re.search(
+        r"^[^\S\n]*OBJET[^\S\n]*:[^\S\n]*(?P<objet>[^\n]*?)[^\S\n]*$",
+        bloc,
+        re.MULTILINE,
+    )
+    if not trouve:
+        raise IncidentEmail(
+            "le bloc EMAIL ne porte pas de ligne « OBJET: ». Aucun envoi."
+        )
+
+    objet = trouve.group("objet").strip()
+    corps = bloc[trouve.end():].strip()
+    corps = re.sub(r"^\s*CORPS\s*:\s*\n?", "", corps, count=1)
+
+    if not objet:
+        raise IncidentEmail("l'objet du bloc EMAIL est vide. Aucun envoi.")
+    if not corps:
+        raise IncidentEmail("le corps du bloc EMAIL est vide. Aucun envoi.")
+    if MOTIF_ADRESSE.search(objet) or MOTIF_ADRESSE.search(corps):
+        raise IncidentEmail(
+            "le message contient une adresse email en clair, ce qu'interdit la "
+            "règle 4 de la constitution. Aucun envoi."
+        )
+    return objet, corps
+
+
+def composer_message(corps: str, date_du_jour: str, heure_utc: str) -> str:
+    """Le corps écrit par l'agent, suivi de la signature imposée par le script."""
+    return (
+        f"{corps.strip()}\n"
+        "\n"
+        "--\n"
+        "Agent de veille RH\n"
+        f"Run automatique du {date_du_jour} à {heure_utc} UTC.\n"
+        "Ce message a été écrit par l'agent lui-même, puis relu par un second "
+        "agent avant envoi.\n"
+        f"Tous les rapports : {LIEN_PUBLIC}\n"
+    )
+
+
+def envoyer_email(objet: str, message: str, destinataires: list[str]) -> str:
+    """Envoie via l'API Resend. Un seul appel, donc un seul email par run.
+
+    POST https://api.resend.com/emails, en-têtes Authorization: Bearer et
+    Content-Type: application/json, corps JSON portant from, to, subject, text.
+    Les abonnés sont en copie cachée pour qu'aucun ne voie l'adresse des
+    autres. Rend l'identifiant Resend du message envoyé.
+    """
+    cle = os.environ.get("RESEND_API_KEY", "").strip()
+    if not cle:
+        raise IncidentEmail(
+            "RESEND_API_KEY absent de l'environnement. Aucun envoi. "
+            "Sur GitHub Actions : secret du dépôt du même nom."
+        )
+
+    charge = json.dumps(
+        {
+            "from": RESEND_EXPEDITEUR,
+            # Le destinataire visible est l'expéditeur lui-même : les abonnés
+            # sont en copie cachée, aucun ne voit l'adresse d'un autre.
+            "to": [RESEND_EXPEDITEUR],
+            "bcc": destinataires,
+            "subject": objet,
+            "text": message,
+        }
+    ).encode("utf-8")
+
+    requete = urllib.request.Request(
+        RESEND_URL,
+        data=charge,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {cle}",
+            "Content-Type": "application/json",
+            # Un même run rejoué ne produit pas deux fois le même envoi.
+            "Idempotency-Key": f"sos-veille-{hashlib.sha256(charge).hexdigest()[:32]}",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(requete, timeout=RESEND_TIMEOUT) as reponse:
+            corps = json.loads(reponse.read().decode("utf-8") or "{}")
+        return str(corps.get("id", "identifiant non renvoyé"))
+    except urllib.error.HTTPError as err:
+        detail = ""
+        try:
+            brut = json.loads(err.read().decode("utf-8") or "{}")
+            detail = str(brut.get("message") or brut.get("name") or "")
+        except Exception:
+            detail = "réponse illisible"
+        if err.code in (403, 422) and "domain" in detail.lower():
+            raise IncidentEmail(
+                f"Resend refuse l'envoi ({err.code}) : {detail}. Le domaine "
+                "emmanueldimarco.fr n'est probablement pas encore vérifié. "
+                "Aucun envoi, le run continue normalement."
+            ) from err
+        raise IncidentEmail(
+            f"Resend a répondu {err.code} : {detail or err.reason}. Aucun envoi."
+        ) from err
+    except urllib.error.URLError as err:
+        raise IncidentEmail(f"Resend injoignable : {err.reason}. Aucun envoi.") from err
+    except (TimeoutError, OSError) as err:
+        raise IncidentEmail(f"Envoi interrompu : {err}. Aucun envoi.") from err
+    except (ValueError, json.JSONDecodeError) as err:
+        raise IncidentEmail(
+            f"Réponse de Resend illisible : {err}. Statut d'envoi inconnu."
+        ) from err
+
+
+def rendre_archive_email(
+    date_du_jour: str,
+    statut: str,
+    nb_destinataires: int,
+    objet: str = "",
+    message: str = "",
+    incident: str = "",
+    identifiant: str = "",
+) -> str:
+    """L'archive etat/emails/AAAA-MM-JJ.md, tentative réussie comme échouée.
+
+    Aucune adresse n'y figure jamais, seulement un nombre de destinataires :
+    règle 4 de la constitution.
+    """
+    lignes = [
+        f"# Envoi du {date_du_jour}",
+        "",
+        "<!-- archive de tentative d'envoi, reussie ou non -->",
+        "",
+        f"- **Statut** : {statut}",
+        f"- **Destinataires** : {nb_destinataires}"
+        + (" (aucune adresse n'est archivée, règle 4 de la constitution)"
+           if nb_destinataires else ""),
+    ]
+    if identifiant:
+        lignes.append(f"- **Identifiant Resend** : `{identifiant}`")
+    if incident:
+        lignes += ["", "## Incident", "", incident]
+    if objet:
+        lignes += ["", "## Objet", "", objet]
+    if message:
+        lignes += ["", "## Message", "", "```", message.strip(), "```"]
+    return "\n".join(lignes).rstrip() + "\n"
+
+
+def traiter_email(
+    bloc: str | None,
+    verdict: "Verdict",
+    date_du_jour: str,
+    heure_utc: str,
+) -> None:
+    """Tente l'envoi, archive la tentative, et ne lève jamais.
+
+    Toute anomalie est journalisée et archivée, puis le run continue. Le
+    rapport est déjà écrit à ce stade : rien de ce qui suit ne peut le remettre
+    en cause.
+    """
+    EMAILS.mkdir(parents=True, exist_ok=True)
+    archive = EMAILS / f"{date_du_jour}.md"
+
+    def journaliser(statut: str, incident: str = "", **reste) -> None:
+        print(f"Email : {statut}." + (f" {incident}" if incident else ""), file=sys.stderr)
+        archive.write_text(
+            rendre_archive_email(date_du_jour, statut, incident=incident, **reste),
+            encoding="utf-8",
+        )
+
+    try:
+        if bloc is None:
+            print(
+                "Email : aucun bloc EMAIL produit. L'agent n'a rien jugé de "
+                "notable à signaler cette semaine, ce qui est normal.",
+                file=sys.stderr,
+            )
+            return
+
+        if verdict.bloque_l_email:
+            motifs = " ".join(
+                motif for portee, motif in verdict.blocages if portee == "EMAIL"
+            )
+            journaliser("non envoyé, bloqué par le garde-fou", incident=motifs,
+                        nb_destinataires=0)
+            return
+
+        abonnes = lire_abonnes()
+        if not abonnes:
+            journaliser(
+                "non envoyé, aucun abonné",
+                incident="abonnes.md est absent, vide, ou ne contient aucune "
+                         "adresse valide. Ce n'est pas une erreur.",
+                nb_destinataires=0,
+            )
+            return
+
+        objet, corps = analyser_email(bloc)
+        message = composer_message(corps, date_du_jour, heure_utc)
+
+        # Plafond dur : un seul appel à l'API, donc un seul email par run.
+        for _ in range(PLAFOND_EMAILS_PAR_RUN):
+            identifiant = envoyer_email(objet, message, abonnes)
+        journaliser(
+            "envoyé",
+            nb_destinataires=len(abonnes),
+            objet=objet,
+            message=message,
+            identifiant=identifiant,
+        )
+
+    except IncidentEmail as incident:
+        journaliser("non envoyé", incident=str(incident), nb_destinataires=0)
+    except Exception as imprevu:  # noqa: BLE001
+        # Filet de dernier recours : quoi qu'il arrive dans cette section, le
+        # run continue. L'email ne peut pas faire tomber la veille.
+        journaliser(
+            "non envoyé, incident imprévu",
+            incident=f"{type(imprevu).__name__} : {imprevu}",
+            nb_destinataires=0,
+        )
+
+
 # --------------------------------------------------------------------------- écriture
 
 
@@ -1509,6 +1790,10 @@ def main() -> int:
 
     verifier_empreintes(scelles, "après application de toutes les écritures")
     print("Fichiers scellés intacts.", file=sys.stderr)
+
+    # Dernier, et jamais bloquant : le rapport est déjà écrit, rien de ce qui
+    # suit ne peut le remettre en cause.
+    traiter_email(blocs.get("EMAIL"), verdict, date_du_jour, heure_utc)
 
     print(f"Run terminé en {duree:.0f} s.", file=sys.stderr)
     return 0

@@ -38,6 +38,9 @@ jobs:
         id: run
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Absent ou invalide : le run journalise l'incident et continue.
+          # L'email est un bonus, jamais un point de defaillance.
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python scripts/run.py
 
       # Deux commits quand l'agent a modifié ses propres règles, un seul sinon.
