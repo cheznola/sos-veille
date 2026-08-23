@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOS · un agent qui veille pendant que vous dormez</title>
+<meta name="description" content="Un agent autonome produit chaque semaine une veille RH sourcée, sans personne dans la boucle. Intervention EMLV, master RH.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B181C; --bg-2:#0F2126; --line:#22383E;
+    --ink:#EAE4D6; --ink-soft:#9BAAAD;
+    --gold:#D4A03F; --teal:#5FB0A2; --red:#C85E44;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--serif); font-weight:300; font-size:19px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:0 28px}
+  .mono{font-family:var(--mono); font-weight:500; text-transform:uppercase;
+        letter-spacing:.18em; font-size:.7rem; color:var(--ink-soft)}
+  a{color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(212,160,63,.35)}
+  a:hover{border-bottom-color:var(--gold)}
+  section{border-top:1px solid var(--line); padding:76px 0}
+
+  /* ---------- header ---------- */
+  header{padding:96px 0 76px}
+  .eyebrow{display:flex; align-items:center; gap:14px; margin-bottom:34px}
+  .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--gold); flex:none}
+  h1{
+    font-family:var(--sans); font-weight:800; font-size:clamp(2.5rem,7.2vw,4.6rem);
+    line-height:1.03; letter-spacing:-.025em; margin:0 0 28px; text-wrap:balance;
+  }
+  h1 .sep{color:var(--gold)}
+  h1 em{font-style:normal; color:var(--teal)}
+  .lede{font-size:clamp(1.1rem,2.4vw,1.36rem); max-width:44ch; color:var(--ink);
+        opacity:.9; margin:0}
+  .lede strong{font-weight:400; color:var(--gold)}
+
+  /* ---------- le mur ---------- */
+  h2{font-family:var(--sans); font-weight:800; font-size:clamp(1.6rem,3.6vw,2.3rem);
+     letter-spacing:-.02em; line-height:1.12; margin:0 0 12px}
+  .section-intro{color:var(--ink-soft); max-width:52ch; margin:0 0 46px}
+  .wall{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line)}
+  .wall > div{padding:34px 30px}
+  .wall > div:first-child{border-right:1px solid var(--line)}
+  .wall h3{font-family:var(--sans); font-weight:600; font-size:1.28rem; margin:14px 0 18px;
+           letter-spacing:-.01em}
+  .wall .tag{color:var(--red)}
+  .wall .is-agent .tag{color:var(--teal)}
+  .wall ul{list-style:none; margin:0; padding:0; font-size:.99rem}
+  .wall li{padding:11px 0 11px 24px; position:relative; border-top:1px solid rgba(34,56,62,.6);
+           color:var(--ink-soft)}
+  .wall li:first-child{border-top:0}
+  .wall li::before{content:"—"; position:absolute; left:0; color:var(--line)}
+  .wall .is-agent li::before{content:"→"; color:var(--teal)}
+  .keyline{
+    margin:44px 0 0; padding:32px 0 0; border-top:1px solid var(--line);
+    font-family:var(--sans); font-weight:600; font-size:clamp(1.25rem,3vw,1.75rem);
+    line-height:1.28; letter-spacing:-.015em; text-wrap:balance;
+  }
+  .keyline b{font-weight:800; color:var(--gold)}
+
+  /* ---------- cycle ---------- */
+  .cycle-frame{border:1px solid var(--line); padding:18px 10px; background:
+      radial-gradient(120% 90% at 50% 40%, rgba(95,176,162,.05), transparent 70%)}
+  svg.cycle{display:block; width:100%; height:auto}
+  .n-label{font-family:var(--sans); font-weight:600; font-size:17px; fill:var(--ink)}
+  .n-sub{font-family:var(--mono); font-weight:400; font-size:11px; letter-spacing:.1em;
+         text-transform:uppercase; fill:var(--ink-soft)}
+  .n-num{font-family:var(--mono); font-weight:500; font-size:19px; letter-spacing:.02em}
+  .c-mid{font-family:var(--mono); font-weight:500; font-size:11.5px; letter-spacing:.2em;
+         text-transform:uppercase; fill:var(--ink-soft)}
+
+  /* ---------- chiffres ---------- */
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line)}
+  .stat{padding:30px 24px; border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat .v{font-family:var(--sans); font-weight:800; font-size:clamp(2rem,4.6vw,2.9rem);
+           line-height:1; letter-spacing:-.03em; color:var(--gold); display:block; margin-bottom:12px}
+  .stat.teal .v{color:var(--teal)}
+  .stat .k{font-size:.94rem; color:var(--ink-soft); line-height:1.4}
+
+  /* ---------- rapport ---------- */
+  .report-head{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
+               gap:16px; margin-bottom:26px}
+  .report-card{border:1px solid var(--line); background:var(--bg-2)}
+  .report-top{padding:22px 30px; border-bottom:1px solid var(--line);
+              display:flex; flex-wrap:wrap; align-items:center; gap:14px}
+  .live{display:inline-flex; align-items:center; gap:9px}
+  .live .pulse{width:7px; height:7px; border-radius:50%; background:var(--teal);
+               animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .report-date{font-family:var(--sans); font-weight:600; font-size:1.16rem; margin-left:auto}
+  .report-body{padding:14px 30px 34px; font-size:1.02rem}
+  .state{padding:52px 30px; text-align:center; color:var(--ink-soft)}
+  .state .spin{width:24px; height:24px; margin:0 auto 20px; border:2px solid var(--line);
+               border-top-color:var(--teal); border-radius:50%; animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .state.err{color:var(--ink)}
+  .state.err .mark{color:var(--red); font-family:var(--mono); font-size:.8rem;
+                   letter-spacing:.18em; text-transform:uppercase; display:block; margin-bottom:14px}
+
+  /* markdown rendu */
+  .md h1,.md h2,.md h3{font-family:var(--sans); letter-spacing:-.015em; line-height:1.2}
+  .md h1{font-weight:800; font-size:1.6rem; margin:34px 0 14px}
+  .md h2{font-weight:800; font-size:1.3rem; margin:38px 0 12px; padding-top:22px;
+         border-top:1px solid var(--line)}
+  .md h2:first-child{border-top:0; padding-top:0; margin-top:18px}
+  .md h3{font-weight:600; font-size:1.08rem; margin:26px 0 10px; color:var(--teal)}
+  .md p{margin:0 0 15px}
+  .md strong{font-weight:400; color:var(--gold); font-family:var(--mono); font-size:.78em;
+             letter-spacing:.13em; text-transform:uppercase}
+  .md h1 strong,.md h2 strong,.md h3 strong,.md em strong{font-family:inherit; font-size:inherit;
+             letter-spacing:normal; text-transform:none; color:inherit; font-weight:800}
+  .md em{color:var(--ink-soft); font-style:italic}
+  .md ul,.md ol{margin:0 0 18px; padding-left:22px}
+  .md li{margin-bottom:9px}
+  .md li::marker{color:var(--teal)}
+  .md hr{border:0; border-top:1px solid var(--line); margin:30px 0}
+  .md blockquote{margin:22px 0; padding:16px 22px; border-left:2px solid var(--gold);
+                 background:rgba(212,160,63,.05); color:var(--ink)}
+  .md blockquote p:last-child{margin-bottom:0}
+  .md code{font-family:var(--mono); font-size:.86em; background:rgba(34,56,62,.7);
+           padding:2px 6px; border-radius:2px}
+  .md pre{overflow-x:auto; padding:16px; background:#081216; border:1px solid var(--line)}
+  .md table{width:100%; border-collapse:collapse; margin:20px 0; font-size:.94rem; display:block;
+            overflow-x:auto}
+  .md th,.md td{border:1px solid var(--line); padding:9px 12px; text-align:left}
+  .md a{word-break:break-word}
+  .fallback{white-space:pre-wrap; font-family:var(--mono); font-size:.8rem; line-height:1.7}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line); padding:54px 0 76px; color:var(--ink-soft);
+         font-size:.95rem}
+  .foot-grid{display:flex; flex-wrap:wrap; gap:18px 40px; align-items:baseline;
+             justify-content:space-between}
+
+  @media (max-width:760px){
+    body{font-size:17.5px}
+    .wrap{padding:0 20px}
+    header{padding:64px 0 54px}
+    section{padding:56px 0}
+    .wall{grid-template-columns:1fr}
+    .wall > div:first-child{border-right:0; border-bottom:1px solid var(--line)}
+    .stats{grid-template-columns:1fr 1fr}
+    .stat{border-bottom:1px solid var(--line)}
+    .stat:nth-child(2n){border-right:0}
+    .stat:nth-last-child(-n+2){border-bottom:0}
+    .report-top,.report-body{padding-left:20px; padding-right:20px}
+    .report-date{margin-left:0; width:100%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important; animation-iteration-count:1!important;
+                         transition-duration:.001ms!important}
+    .state .spin{border-top-color:var(--teal); opacity:.8}
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="eyebrow"><span class="dot"></span><span class="mono">Intervention EMLV · Master RH</span></div>
+  <h1>SOS <span class="sep">·</span> un agent qui veille<br>pendant que vous <em>dormez</em></h1>
+  <p class="lede">Ce n'est pas un chatbot. Personne ne lui pose de question. Chaque dimanche à 3 h du matin, il se réveille seul, cherche sur le web, trie, écrit, <strong>puis se souvient de ce qu'il a dit la semaine d'avant</strong>.</p>
+</header>
+
+<section class="wrap">
+  <h2>Le mur</h2>
+  <p class="section-intro">Il existe une frontière nette entre les deux usages de l'IA que vous connaissez déjà et celui-ci. Elle ne passe pas là où on l'imagine.</p>
+
+  <div class="wall">
+    <div>
+      <span class="mono tag">L'IA qui répond</span>
+      <h3>Vous demandez, elle répond</h3>
+      <ul>
+        <li>Vous ouvrez une fenêtre, vous tapez</li>
+        <li>Elle attend votre question pour exister</li>
+        <li>Elle oublie tout à la fermeture de l'onglet</li>
+        <li>Vous vérifiez, vous copiez, vous collez</li>
+        <li>Le travail s'arrête quand vous vous arrêtez</li>
+      </ul>
+    </div>
+    <div class="is-agent">
+      <span class="mono tag">L'IA qui agit</span>
+      <h3>Elle part, elle revient avec le travail</h3>
+      <ul class="is-agent">
+        <li>Personne ne l'ouvre : une horloge la déclenche</li>
+        <li>Elle décide seule quoi chercher, et quand relancer</li>
+        <li>Elle écrit dans des fichiers qui lui survivent</li>
+        <li>Elle relit ses anciens rapports et se corrige</li>
+        <li>Le travail avance pendant que vous dormez</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="keyline">La différence n'est pas l'intelligence du modèle.<br><b>C'est le droit d'agir.</b></p>
+</section>
+
+<section class="wrap">
+  <h2>Une semaine dans sa vie</h2>
+  <p class="section-intro">Cinq étapes, en boucle, sans intervention humaine. Les deux étapes dorées sont celles qu'un chatbot n'a pas : se déclencher tout seul, et se souvenir.</p>
+
+  <div class="cycle-frame">
+    <svg class="cycle" viewBox="0 0 840 620" role="img" aria-labelledby="cyc-t cyc-d">
+      <title id="cyc-t">Le cycle hebdomadaire de l'agent</title>
+      <desc id="cyc-d">Cinq étapes en boucle fermée : réveil le dimanche à 3 h, enquête web en deux passes, tri du signal, rédaction sourcée de cinq à huit sujets, puis mise à jour de la mémoire et autocorrection, qui ramène au réveil suivant.</desc>
+
+      <defs>
+        <marker id="ar-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#5FB0A2"></path>
+        </marker>
+        <marker id="ar-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#D4A03F"></path>
+        </marker>
+      </defs>
+
+      <circle cx="420" cy="330" r="195" fill="none" stroke="#22383E" stroke-width="1" stroke-dasharray="2 7"></circle>
+      <text class="c-mid" x="420" y="324" text-anchor="middle">chaque</text>
+      <text class="c-mid" x="420" y="344" text-anchor="middle" fill="#D4A03F">dimanche</text>
+
+      <!-- arcs, sens horaire -->
+      <path d="M 477.0 143.5 A 195 195 0 0 1 579.7 218.2" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
+      <path d="M 615.0 326.6 A 195 195 0 0 1 575.7 447.4" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
+      <path d="M 483.5 514.4 A 195 195 0 0 1 356.5 514.4" fill="none" stroke="#5FB0A2" stroke-width="1.5" marker-end="url(#ar-teal)" opacity=".75"></path>
+      <path d="M 264.3 447.4 A 195 195 0 0 1 225.0 326.6" fill="none" stroke="#D4A03F" stroke-width="1.5" marker-end="url(#ar-gold)" opacity=".75"></path>
+      <path d="M 260.3 218.2 A 195 195 0 0 1 363.0 143.5" fill="none" stroke="#D4A03F" stroke-width="1.5" marker-end="url(#ar-gold)" opacity=".75"></path>
+
+      <!-- 1 · réveil (sommet, doré) -->
+      <circle cx="420" cy="135" r="46" fill="#0F2126" stroke="#D4A03F" stroke-width="1.5"></circle>
+      <text class="n-num" x="420" y="142" text-anchor="middle" fill="#D4A03F">01</text>
+      <text class="n-label" x="420" y="56" text-anchor="middle">réveil</text>
+      <text class="n-sub" x="420" y="76" text-anchor="middle" fill="#D4A03F">03:00, sans personne</text>
+
+      <!-- 2 · enquête web (droite, teal) -->
+      <circle cx="605.5" cy="269.7" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
+      <text class="n-num" x="605.5" y="276.7" text-anchor="middle" fill="#5FB0A2">02</text>
+      <text class="n-label" x="665.5" y="264" text-anchor="start">enquête web</text>
+      <text class="n-sub" x="665.5" y="284" text-anchor="start">deux passes</text>
+
+      <!-- 3 · tri du signal (bas droite, teal) -->
+      <circle cx="534.6" cy="487.8" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
+      <text class="n-num" x="534.6" y="494.8" text-anchor="middle" fill="#5FB0A2">03</text>
+      <text class="n-label" x="534.6" y="562" text-anchor="middle">tri du signal</text>
+      <text class="n-sub" x="534.6" y="581" text-anchor="middle">le bruit sort</text>
+
+      <!-- 4 · rédaction (bas gauche, teal) -->
+      <circle cx="305.4" cy="487.8" r="46" fill="#0F2126" stroke="#5FB0A2" stroke-width="1.5"></circle>
+      <text class="n-num" x="305.4" y="494.8" text-anchor="middle" fill="#5FB0A2">04</text>
+      <text class="n-label" x="305.4" y="562" text-anchor="middle">rédaction sourcée</text>
+      <text class="n-sub" x="305.4" y="581" text-anchor="middle">5 à 8 sujets</text>
+
+      <!-- 5 · mémoire (gauche, doré) -->
+      <circle cx="234.5" cy="269.7" r="46" fill="#0F2126" stroke="#D4A03F" stroke-width="1.5"></circle>
+      <text class="n-num" x="234.5" y="276.7" text-anchor="middle" fill="#D4A03F">05</text>
+      <text class="n-label" x="174.5" y="264" text-anchor="end">mémoire</text>
+      <text class="n-sub" x="174.5" y="284" text-anchor="end" fill="#D4A03F">et autocorrection</text>
+    </svg>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Ce que ça donne</h2>
+  <p class="section-intro">Les chiffres d'un run réel, pas d'une démo.</p>
+  <div class="stats">
+    <div class="stat"><span class="v">26</span><span class="k">recherches web sur un seul run</span></div>
+    <div class="stat teal"><span class="v">0</span><span class="k">humain dans la boucle</span></div>
+    <div class="stat"><span class="v">7</span><span class="k">domaines RH couverts</span></div>
+    <div class="stat teal"><span class="v">&#8734;</span><span class="k">mémoire cumulée, rien n'est oublié d'une semaine sur l'autre</span></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="report-head">
+    <div>
+      <h2>Le dernier rapport</h2>
+      <p class="section-intro" style="margin-bottom:0">Ce bloc n'est pas une capture d'écran. Il va chercher, maintenant, le fichier le plus récent produit par l'agent.</p>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <div class="report-top">
+      <span class="live"><span class="pulse"></span><span class="mono">chargé en direct depuis le dépôt</span></span>
+      <span class="report-date" id="report-date"></span>
+    </div>
+
+    <div id="report-state" class="state">
+      <div class="spin"></div>
+      <span class="mono">récupération du dernier rapport…</span>
+    </div>
+
+    <div class="report-body md" id="report-body" hidden></div>
+  </div>
+
+  <p style="margin-top:24px"><a href="https://github.com/cheznola/sos-veille/tree/main/rapports">Voir tous les rapports &rarr;</a></p>
+</section>
+
+<footer class="wrap">
+  <div class="foot-grid">
+    <div>
+      <span class="mono" style="display:block; margin-bottom:10px">SOS · système de veille agentique</span>
+      Intervention EMLV — Master RH.<br>Le code, la méthode et tous les rapports sont publics.
+    </div>
+    <div><a href="https://github.com/cheznola/sos-veille">github.com/cheznola/sos-veille</a></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+  var REPO = "cheznola/sos-veille";
+  var DOSSIER = "rapports";
+  var LIEN = "https://github.com/" + REPO + "/tree/main/" + DOSSIER;
+
+  var elState = document.getElementById("report-state");
+  var elBody  = document.getElementById("report-body");
+  var elDate  = document.getElementById("report-date");
+
+  var MOIS = ["janvier","février","mars","avril","mai","juin",
+              "juillet","août","septembre","octobre","novembre","décembre"];
+
+  function enFrancais(nom) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})\.md$/.exec(nom);
+    if (!m) { return nom; }
+    return parseInt(m[3], 10) + " " + MOIS[parseInt(m[2], 10) - 1] + " " + m[1];
+  }
+
+  function afficherEtat(html, classe) {
+    elState.className = "state" + (classe ? " " + classe : "");
+    elState.innerHTML = html;
+    elState.hidden = false;
+    elBody.hidden = true;
+  }
+
+  function echapper(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  // Le rapport est écrit par un modèle : on ne lui fait pas confiance pour du HTML.
+  function assainir(racine) {
+    racine.querySelectorAll("script, style, iframe, object, embed, form, link").forEach(function (n) {
+      n.remove();
+    });
+    racine.querySelectorAll("*").forEach(function (n) {
+      Array.prototype.slice.call(n.attributes).forEach(function (a) {
+        var nom = a.name.toLowerCase();
+        var val = (a.value || "").trim().toLowerCase();
+        if (nom.indexOf("on") === 0) { n.removeAttribute(a.name); }
+        if ((nom === "href" || nom === "src") && val.indexOf("javascript:") === 0) {
+          n.removeAttribute(a.name);
+        }
+      });
+      if (n.tagName === "A") {
+        n.setAttribute("target", "_blank");
+        n.setAttribute("rel", "noopener noreferrer");
+      }
+    });
+  }
+
+  function rendre(markdown, nomFichier) {
+    elDate.textContent = enFrancais(nomFichier);
+
+    if (typeof window.marked !== "undefined" && window.marked.parse) {
+      elBody.innerHTML = window.marked.parse(markdown, { breaks: false, gfm: true });
+      assainir(elBody);
+      // Le rapport porte déjà son propre titre : on retire le doublon.
+      var premier = elBody.firstElementChild;
+      if (premier && premier.tagName === "H1") { premier.remove(); }
+    } else {
+      // marked.js n'a pas pu être chargé : on affiche le markdown brut, lisible.
+      elBody.innerHTML = '<pre class="fallback">' + echapper(markdown) + "</pre>";
+    }
+
+    elState.hidden = true;
+    elBody.hidden = false;
+  }
+
+  function echouer(raison) {
+    afficherEtat(
+      '<span class="mark">rapport indisponible</span>' +
+      "<p>Impossible de joindre le dépôt à l'instant (" + echapper(raison) + ").</p>" +
+      '<p style="margin-bottom:0"><a href="' + LIEN + '">Lire les rapports directement sur GitHub &rarr;</a></p>',
+      "err"
+    );
+  }
+
+  function enAttente() {
+    afficherEtat(
+      '<span class="mono" style="display:block; margin-bottom:14px">en attente du premier run</span>' +
+      "<p>L'agent n'a pas encore publié de rapport. Le prochain réveil est prévu dimanche à 3 h.</p>" +
+      '<p style="margin-bottom:0"><a href="' + LIEN + '">Suivre le dossier des rapports &rarr;</a></p>'
+    );
+  }
+
+  fetch("https://api.github.com/repos/" + REPO + "/contents/" + DOSSIER, {
+    headers: { "Accept": "application/vnd.github+json" }
+  })
+    .then(function (r) {
+      if (!r.ok) { throw new Error("HTTP " + r.status); }
+      return r.json();
+    })
+    .then(function (fichiers) {
+      if (!Array.isArray(fichiers)) { throw new Error("réponse inattendue"); }
+      var rapports = fichiers.filter(function (f) {
+        return f.type === "file" && /^\d{4}-\d{2}-\d{2}\.md$/.test(f.name);
+      }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+
+      if (rapports.length === 0) { enAttente(); return null; }
+
+      var dernier = rapports[rapports.length - 1];
+      return fetch(dernier.download_url)
+        .then(function (r) {
+          if (!r.ok) { throw new Error("HTTP " + r.status); }
+          return r.text();
+        })
+        .then(function (md) { rendre(md, dernier.name); });
+    })
+    .catch(function (e) { echouer(e && e.message ? e.message : "erreur réseau"); });
+})();
+</script>
+</body>
+</html>
