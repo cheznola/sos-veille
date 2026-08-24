@@ -5,9 +5,12 @@ souvient de ce qu'il vous a déjà dit.
 
 Tous les dimanches à 1 h du matin, il part chercher sur le web ce qui a bougé dans
 votre secteur, trie, écarte le bruit, et dépose un rapport de cinq à huit sujets dans
-ce dépôt. Il tient aussi une liste des dossiers en cours — un décret pas encore publié,
-une négociation ouverte — et il les suit d'une semaine sur l'autre. Quand l'un d'eux
+ce dépôt. Il tient aussi une liste des dossiers en cours (un décret pas encore publié,
+une négociation ouverte) et il les suit d'une semaine sur l'autre. Quand l'un d'eux
 aboutit et qu'il s'était trompé, il revient corriger son ancien rapport.
+
+Il mesure ensuite ce que ses propres règles lui ont rapporté, et quand les chiffres lui
+donnent tort, il réécrit la règle. Un second agent le relit avant toute publication.
 
 Vous n'avez rien à faire. Vous lisez.
 
@@ -25,6 +28,41 @@ Un fichier par semaine dans `rapports/`, nommé par sa date. Chaque rapport cont
 
 Cinq à huit sujets maximum. Souvent moins. L'agent a pour consigne explicite de ne pas
 remplir : une semaine calme est une information, pas un échec.
+
+Le rapport peut aussi porter une rubrique **« Ce que je remarque »**, où l'agent
+signale un motif qu'il observe dans ses propres données sur au moins trois runs, et que
+personne ne lui a demandé de chercher. Il l'omet entièrement s'il n'a rien.
+
+Autour du rapport, cinq autres traces :
+
+| Dossier | Ce qu'on y trouve |
+|---|---|
+| `etat/bilans/` | Ce que chaque domaine a donné, run par run |
+| `etat/performance.md` | Le cumul, recalculé à chaque run : totaux, domaines vides, sources productives |
+| `etat/audits/` | Le verdict du relecteur, validé comme bloqué |
+| `evolutions/` | Les règles que l'agent a décidé de changer chez lui, avec l'avant, l'après et sa justification |
+| `etat/emails/` | Les tentatives d'envoi aux abonnés, réussies ou non |
+
+---
+
+## Ce qui le tient
+
+`constitution.md` porte sept règles que l'agent ne peut pas toucher : ne jamais
+inventer une source ni une URL, une semaine pauvre est une information, il propose
+sans décider, zéro donnée personnelle en sortie, toute modification de ses règles est
+justifiée et tracée, le format de sortie est intangible, et la constitution
+elle-même est hors de sa portée.
+
+Ce n'est pas qu'une consigne. Le script relève l'empreinte SHA-256 de
+`constitution.md` et de `profil.md` avant l'appel au modèle et la revérifie après
+toutes les écritures. Si l'un des deux a bougé d'un seul octet, le run échoue et rien
+n'est publié.
+
+Un **second agent** relit le premier avant toute écriture. Il n'a aucun outil, pas de
+recherche web, pas d'accès disque : il reçoit la constitution, le rapport, le bilan et
+les évolutions proposées, et il vérifie que chaque affirmation est sourcée, qu'aucune
+URL n'est douteuse, et qu'aucune évolution ne repose sur une impression plutôt que sur
+un chiffre. Il bloque une évolution, un email, ou le rapport entier.
 
 ---
 
@@ -48,17 +86,32 @@ recommandations utiles plutôt que génériques.
 
 Et **`etat/sujets-suivis.md`** est la mémoire. L'agent la réécrit à chaque run.
 
+**`moteur.md` et le fichier de domaine sont modifiables par l'agent lui-même**, et par
+lui seul parmi tous les fichiers du dépôt. C'est le cœur du projet : à partir de
+`etat/performance.md`, il peut réordonner les domaines, retirer une source qui n'a
+jamais rien produit, ajuster sa liste du bruit. Il doit le justifier par des chiffres,
+sur au moins trois runs, et le relecteur annule toute évolution fondée sur une
+impression. Chaque changement est archivé dans `evolutions/`, daté, réversible, et fait
+l'objet d'un commit séparé.
+
+`constitution.md` et `profil.md`, eux, ne sont modifiables que par vous.
+
 ### Les fichiers, un par un
 
 | Fichier | À quoi il sert | Qui l'écrit |
 |---|---|---|
-| `moteur.md` | La méthode de veille, indépendante du secteur | vous, rarement |
-| `domaines/rh-etudiant.md` | Les sujets, sources et bruit d'un secteur | vous |
-| `profil.md` | La personne servie et ses usages | vous |
+| `constitution.md` | Les sept règles intangibles | vous seul, à la main |
+| `profil.md` | La personne servie et ses usages | vous seul, à la main |
+| `moteur.md` | La méthode de veille, indépendante du secteur | vous **et l'agent** |
+| `domaines/rh-etudiant.md` | Les sujets, sources et bruit d'un secteur | vous **et l'agent** |
+| `abonnes.md` | Les adresses qui reçoivent les alertes | vous seul, à la main |
 | `etat/sujets-suivis.md` | Les dossiers en cours, suivis d'une semaine sur l'autre | l'agent |
+| `etat/performance.md` | Le cumul chiffré, matière de l'auto-évaluation | le script |
+| `etat/bilans/`, `etat/audits/`, `etat/emails/` | Bilans, verdicts du relecteur, envois | le script |
+| `evolutions/` | Les règles que l'agent a changées chez lui | l'agent |
 | `rapports/AAAA-MM-JJ.md` | Un rapport par run | l'agent |
-| `scripts/run.py` | Le script qui assemble tout et appelle le modèle | — |
-| `.github/workflows/veille.yml` | Le déclencheur hebdomadaire | — |
+| `scripts/run.py` | Le script qui assemble tout et appelle les deux modèles | vous |
+| `.github/workflows/veille.yml` | Le déclencheur hebdomadaire | vous |
 
 ---
 
@@ -66,7 +119,7 @@ Et **`etat/sujets-suivis.md`** est la mémoire. L'agent la réécrit à chaque r
 
 Il faut un compte GitHub et une clé d'API Anthropic. Comptez dix minutes.
 
-**1. Forkez ce dépôt** — bouton *Fork* en haut à droite. Vous obtenez votre propre copie.
+**1. Forkez ce dépôt.** Bouton *Fork* en haut à droite. Vous obtenez votre propre copie.
 
 **2. Ajoutez votre clé d'API.** Dans votre copie : *Settings* → *Secrets and variables*
 → *Actions* → *New repository secret*. Nom exact : `ANTHROPIC_API_KEY`. Valeur : votre
@@ -95,6 +148,14 @@ votre réalité, les rapports seront à côté.
 `rapports/`.
 
 Ensuite, ça tourne tout seul chaque dimanche à 1 h UTC.
+
+**7. Facultatif : les alertes par email.** Si vous voulez que l'agent écrive lui-même
+aux personnes qui suivent la veille, ajoutez un second secret `RESEND_API_KEY`
+([resend.com](https://resend.com)), vérifiez votre domaine d'expédition chez votre
+hébergeur DNS, adaptez `RESEND_EXPEDITEUR` dans `scripts/run.py`, et remplissez
+`abonnes.md`. Tant que ce n'est pas fait, il ne se passe rien : aucune erreur, aucun
+envoi, le rapport est produit normalement. L'agent n'écrit de toute façon que s'il a
+quelque chose de notable à dire, ce qui n'est pas le cas toutes les semaines.
 
 ---
 
@@ -128,9 +189,14 @@ proposées.
 initial (les deux sections « En cours » et « Clos » vides) et supprimez le contenu de
 `rapports/`. Une mémoire d'un autre secteur produirait des recoupements absurdes.
 
-**Ne touchez pas à `moteur.md`.** Il vaut pour n'importe quel secteur. Vous ne le
-modifiez que si vous voulez changer la *méthode* — plus de sujets, un autre format de
-rapport, trois passes de recherche au lieu de deux.
+**5. Videz aussi les traces d'auto-évaluation.** Supprimez le contenu de
+`etat/bilans/`, `etat/audits/`, `etat/emails/` et `evolutions/`, et laissez le script
+recalculer `etat/performance.md`. Des chiffres hérités d'un autre secteur
+conduiraient l'agent à modifier ses règles sur des preuves qui ne valent plus.
+
+**Ne réécrivez pas `moteur.md` vous-même sans raison.** Il vaut pour n'importe quel
+secteur. Vous ne le modifiez que si vous voulez changer la *méthode* : plus de sujets,
+un autre format de rapport, un autre budget de recherche.
 
 ---
 
@@ -142,12 +208,16 @@ Tous dans `scripts/run.py`, en haut du fichier :
 |---|---|---|
 | `DOMAINE` | `domaines/rh-etudiant.md` | Le fichier de secteur utilisé |
 | `NB_RAPPORTS_RELUS` | `3` | Combien de rapports passés l'agent relit avant de chercher |
-| `MODELE` | `claude-sonnet-4-6` | Le modèle appelé |
-| `MAX_TOKENS` | `32000` | La longueur maximale de la réponse |
+| `MODELE` | `claude-sonnet-4-6` | Le modèle appelé, pour l'agent comme pour le relecteur |
+| `MAX_TOKENS` | `32000` | La longueur maximale de la réponse de l'agent |
+| `MAX_TOKENS_GARDE_FOU` | `8000` | La longueur maximale du verdict du relecteur |
+| `BUDGET_RECHERCHES` | `15` | Le plafond de recherches web pour tout le run |
+| `RESEND_EXPEDITEUR` | `agentveillerh@…` | L'adresse d'expédition des alertes |
+| `PLAFOND_EMAILS_PAR_RUN` | `1` | Le nombre maximal d'emails par run |
 
 Le jour et l'heure du run se changent dans `.github/workflows/veille.yml`, ligne
-`- cron: "0 1 * * 0"` — dans l'ordre : minute, heure, jour du mois, mois, jour de la
-semaine (`0` = dimanche), toujours en UTC.
+`- cron: "0 1 * * 0"`, dans l'ordre : minute, heure, jour du mois, mois, jour de la
+semaine (`0` vaut dimanche), toujours en UTC.
 
 Le nombre de sujets par rapport, lui, n'est pas un réglage technique : il est écrit
 dans `moteur.md`, section « Sélection ».
@@ -162,15 +232,27 @@ Vous relancez, c'est tout.
 
 Les messages d'erreur sont en français et disent quoi faire. Les cas courants :
 
-- *ANTHROPIC_API_KEY absent* — le secret n'est pas créé, ou son nom est mal orthographié.
-- *Bloc manquant dans la réponse du modèle* — le modèle n'a pas respecté le format.
+- *ANTHROPIC_API_KEY absent* : le secret n'est pas créé, ou son nom est mal orthographié.
+- *Bloc manquant dans la réponse du modèle* : le modèle n'a pas respecté le format.
   Relancez ; si ça se répète, c'est le signe qu'un des fichiers de contexte est devenu
   trop long ou contradictoire.
-- *Réponse tronquée* — augmentez `MAX_TOKENS`.
-- *Correction visant un rapport inexistant* — le modèle a cité un rapport qui n'existe
+- *Réponse tronquée* : augmentez `MAX_TOKENS`.
+- *Correction visant un rapport inexistant* : le modèle a cité un rapport qui n'existe
   pas. Le run s'arrête plutôt que d'écrire à côté. Relancez.
-- Le run réussit mais rien n'apparaît dans le dépôt — les droits d'écriture du workflow
+- *Évolution : chemin interdit* : l'agent a proposé de modifier un fichier qui n'est
+  pas le sien. Le run s'arrête et aucune évolution n'est appliquée, pas même les
+  valides. C'est voulu.
+- *VIOLATION DE LA CONSTITUTION* : `constitution.md` ou `profil.md` a changé pendant le
+  run. Rien n'est publié. Vérifiez que vous n'avez pas édité l'un des deux pendant
+  qu'un run tournait.
+- *LE GARDE-FOU A BLOQUÉ LE RAPPORT* : le relecteur a trouvé une affirmation non
+  sourcée ou une règle constitutionnelle enfreinte. Son verdict complet est dans le
+  journal du run. Relancez : le prochain run repart de zéro.
+- Le run réussit mais rien n'apparaît dans le dépôt : les droits d'écriture du workflow
   ne sont pas activés (étape 4 de la mise en place).
+- *Email : non envoyé* : ce n'est jamais un échec. L'envoi est un bonus, le rapport est
+  produit et commité dans tous les cas. La raison exacte est archivée dans
+  `etat/emails/`.
 
 Pour voir ce qui s'est passé : onglet *Actions*, cliquez sur le run, dépliez l'étape
 *Lancer le run de veille*.
@@ -179,11 +261,13 @@ Pour voir ce qui s'est passé : onglet *Actions*, cliquez sur le run, dépliez l
 
 ## Ce que ça coûte
 
-Un run par semaine, un appel au modèle par run, avec de la recherche web. À la publication
-de ce dépôt, `claude-sonnet-4-6` est facturé 3 $ par million de tokens en entrée et 15 $
-par million en sortie, et les recherches web sont facturées à part. Un run typique reste
-de l'ordre de quelques dizaines de centimes ; comptez quelques euros par an. Les tarifs
-à jour sont sur [claude.com/pricing](https://claude.com/pricing).
+Un run par semaine, **deux appels au modèle** par run : l'agent, puis le relecteur. Le
+premier fait de la recherche web, plafonnée à 15 requêtes ; le second n'a aucun outil et
+ne coûte que ses tokens. À la publication de ce dépôt, `claude-sonnet-4-6` est facturé
+3 $ par million de tokens en entrée et 15 $ par million en sortie, et les recherches web
+sont facturées à part. Un run typique reste de l'ordre de quelques dizaines de centimes ;
+comptez quelques euros par an. Les tarifs à jour sont sur
+[claude.com/pricing](https://claude.com/pricing).
 
 ---
 
@@ -193,9 +277,15 @@ Pour tester sans attendre dimanche :
 
 ```bash
 pip install -r requirements.txt
+python scripts/test_parsing.py     # aucun appel API, aucun coût
 export ANTHROPIC_API_KEY=sk-ant-...
 python scripts/run.py
 ```
 
-Le script écrit les mêmes fichiers qu'en automatique. À vous de committer ensuite si le
-résultat vous convient.
+`scripts/test_parsing.py` vérifie à blanc tout ce que le script sait refuser : blocs
+manquants ou dans le désordre, bilans incomplets, chemins d'évolution interdits,
+verdicts de relecteur illisibles, échecs d'envoi email. Il ne fait aucun appel API et
+ne coûte rien. Le workflow le lance avant chaque run payant.
+
+`scripts/run.py` écrit les mêmes fichiers qu'en automatique. À vous de committer ensuite
+si le résultat vous convient.
